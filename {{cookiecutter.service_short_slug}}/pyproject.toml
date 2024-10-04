@@ -1,0 +1,100 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "@(abc\\.)?abstractmethod",
+  "class .*Protocol\\):",
+  "def __repr__",
+  "if __name__ == .__main__.:",
+  "if typing.TYPE_CHECKING:",
+  "pragma: no cover",
+  "raise NotImplementedError",
+]
+
+[tool.coverage.run]
+include = ["bin/*", "lib/*"]
+
+[tool.isort]
+known_first_party = ["bin", "lib", "tests"]
+line_length = 120
+profile = "black"
+py_version = 312
+
+[tool.poetry]
+authors = ["ovsds <github@ovsds.ru>"]
+description = "{{cookiecutter.service_name}}"
+name = "{{cookiecutter.service_slug}}"
+version = "0.0.1"
+
+[tool.poetry.dependencies]
+pydantic = "^2.0.2"
+pydantic-settings = "^2.0.1"
+python = "~3.12"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+black = "24.3.0"
+coverage = "7.4.4"
+deptry = "^0.18.0"
+pytest = "8.1.1"
+pytest-asyncio = "0.23.6"
+pytest-mock = "3.14.0"
+ruff = "0.3.4"
+sort-all = "1.2.0"
+toml-sort = "0.23.1"
+
+[tool.pyright]
+exclude = [
+  "**/__pycache__",
+]
+include = [
+  "bin",
+  "lib",
+  "tests",
+]
+pythonPlatform = "All"
+pythonVersion = "3.12"
+reportConstantRedefinition = "none"
+reportMissingTypeStubs = "none"
+reportPrivateUsage = "information"
+reportPropertyTypeMismatch = "warning"
+reportUninitializedInstanceVariable = "warning"
+reportUnknownMemberType = "none"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportUntypedFunctionDecorator = "warning"
+typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+venv = ".venv"
+venvPath = '.'
+
+[tool.pytest.ini_options]
+log_cli = true
+log_level = "WARNING"
+pythonpath = "."
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+extend-select = [
+  "I", # isort
+  "UP", # pyupgrade
+]
+ignore = [
+  "F403", # 'from modle import *' used; unable to detect undefined names
+  "F405", # 'from module import *' used; unable to detect undefined names
+]
+
+[tool.tomlsort]
+all = true
+ignore_case = true
+in_place = true
+trailing_comma_inline_array = true

@@ -1,0 +1,239 @@
+version: 3
+
+silent: true
+
+vars:
+  ROOT_NENV: "../node_modules"
+  PENV: ".venv"
+
+  SOURCE_FOLDERS: "bin lib tests"
+  TOML_FILES: "pyproject.toml poetry.toml"
+  PYTHON_FILES:
+    sh: find {{ "{{" }}.SOURCE_FOLDERS}} -name '*.py' | tr '\n' ' '
+
+  IMAGE_NAME: "{{cookiecutter.service_slug}}"
+
+tasks:
+  _python:
+    internal: true
+    cmds:
+      - "{{ "{{" }}.PENV}}/bin/python {{ "{{" }}.COMMAND}}"
+
+  _pyright:
+    internal: true
+    cmds:
+      - "{{ "{{" }}.ROOT_NENV}}/.bin/pyright {{ "{{" }}.COMMAND}}"
+
+  _toml-sort:
+    internal: true
+    cmds:
+      - "{{ "{{" }}.PENV}}/bin/toml-sort {{ "{{" }}.COMMAND}}"
+
+  _sort_all:
+    internal: true
+    cmds:
+      - cmd: "{{ "{{" }}.PENV}}/bin/sort-all {{ "{{" }}.COMMAND}} || [ {{ "{{" }}.IGNORE_ERRORS}} = 'true' ]"
+    vars:
+      IGNORE_ERRORS: '{{ "{{" }}.IGNORE_ERRORS | default "true"}}'
+
+  _deptry:
+    internal: true
+    cmds:
+      - "{{ "{{" }}.PENV}}/bin/deptry {{ "{{" }}.COMMAND}}"
+
+  init:
+    desc: Initialize environment
+    cmds:
+      - echo 'Installing python dependencies...'
+      - poetry install
+        --no-root
+        --with dev
+
+  lint:
+    desc: Run lint checks
+    cmds:
+      - echo 'Running poetry checks...'
+      - poetry check --lock
+
+      - echo 'Running deptry checks...'
+      - task: _deptry
+        vars: { COMMAND: "." }
+
+      - echo 'Running black checks...'
+      - task: _python
+        vars: { COMMAND: -m black --check . }
+
+      - echo 'Running toml-sort checks...'
+      - task: _toml-sort
+        vars: { COMMAND: "--check {{ "{{" }}.TOML_FILES}}" }
+
+      - echo 'Running sort-all autofixes...'
+      - task: _sort_all
+        vars:
+          COMMAND: "{{ "{{" }}.PYTHON_FILES}}"
+          IGNORE_ERRORS: "false"
+      - echo ''
+
+      - echo 'Running ruff checks...'
+      - task: _python
+        vars: { COMMAND: "-m ruff check {{ "{{" }}.SOURCE_FOLDERS}}" }
+
+      - echo 'Running pyright checks...'
+      - task: _pyright
+
+  lint-fix:
+    desc: Fix lint issues
+    cmds:
+      - echo 'Running poetry fixes...'
+      - poetry lock --no-update
+      - poetry check
+
+      - echo 'Running deptry checks...'
+      - task: _deptry
+        vars: { COMMAND: "." }
+
+      - echo 'Running black fixes...'
+      - task: _python
+        vars: { COMMAND: -m black --safe . }
+
+      - echo 'Running toml-sort fixes...'
+      - task: _toml-sort
+        vars: { COMMAND: "--in-place {{ "{{" }}.TOML_FILES}}" }
+
+      - echo 'Running sort-all fixes...'
+      - task: _sort_all
+        vars: { COMMAND: "{{ "{{" }}.PYTHON_FILES}}" }
+
+      - echo 'Running ruff fixes...'
+      - task: _python
+        vars: { COMMAND: "-m ruff check --fix {{ "{{" }}.SOURCE_FOLDERS}}" }
+
+      - echo 'Running pyright fixes...'
+      - task: _pyright
+
+  image-build:
+    desc: Build image target for local usage
+    requires:
+      vars:
+        - TARGET
+    cmds:
+      - echo 'Building image {{ "{{" }}.TARGET}} target...'
+      - docker build
+        --tag {{ "{{" }}.IMAGE_NAME}}:{{ "{{" }}.TARGET}}
+        {{ "{{" }} if .TAG }}--tag {{ "{{" }}.TAG}}{{ "{{" }} end }}
+        --target {{ "{{" }}.TARGET}}
+        .
+
+  test:
+    desc: Run tests
+    cmds:
+      - echo 'Running pytest...'
+      - "{{ "{{" }}.PENV}}/bin/python -m pytest tests"
+
+  test-container:
+    desc: Run tests in container
+    cmds:
+      - task: image-build
+        vars: { TARGET: tests }
+
+      - echo 'Running tests...'
+      - docker run
+        {{ "{{" }}.IMAGE_NAME}}:tests
+
+  test-coverage-run:
+    desc: Run tests with coverage
+    cmds:
+      - echo 'Running test coverage...'
+      - "{{ "{{" }}.PENV}}/bin/python -m coverage run -m pytest tests"
+
+  test-coverage-report:
+    desc: Show test coverage report
+    cmds:
+      - echo 'Reporting test coverage...'
+      - "{{ "{{" }}.PENV}}/bin/python -m coverage report -m"
+
+  test-coverage-html:
+    desc: Show test coverage report in browser
+    cmds:
+      - echo 'Generating test coverage report...'
+      - "{{ "{{" }}.PENV}}/bin/python -m coverage html"
+      - "{{ "{{" }}.PENV}}/bin/python -m webbrowser -t {{ "{{" }}.coverage_html}}"
+    vars:
+      coverage_html:
+        sh: "[ $(uname) = 'Darwin' ] && echo 'file://$(pwd)/htmlcov/index.html' || echo 'htmlcov/index.html'"
+
+  clean:
+    desc: Clean environment
+    cmds:
+      - echo 'Cleaning python dependencies...'
+      - rm -rf {{ "{{" }}.PENV}}
+
+      - echo 'Cleaning pytest cache...'
+      - rm -rf .pytest_cache
+
+      - echo 'Cleaning ruff cache...'
+      - rm -rf .ruff_cache
+
+      - echo 'Cleaning coverage results...'
+      - rm -rf .coverage
+      - rm -rf htmlcov
+
+  dependencies-update:
+    desc: Update python dependencies
+    cmds:
+      - echo 'Updating python dependencies...'
+      - poetry update
+      - poetry show --outdated
+
+  dev-server-start:
+    desc: Start development application
+    cmds:
+      - echo 'Starting server...'
+      - "{{ "{{" }}.PENV}}/bin/python -m bin.main"
+
+  dev-server-start-container:
+    desc: Start development application in container
+    cmds:
+      - task: image-build
+        vars: { TARGET: runtime }
+
+      - echo 'Running container...'
+      - docker run
+        {{ "{{" }}.IMAGE_NAME}}:runtime
+
+  update-from-template:
+    desc: Update project from template
+    cmds:
+      - echo 'Updating project from template...'
+      - cookiecutter
+        --no-input
+        --overwrite-if-exists
+        --output-dir ../
+        {{ "{{" }}.TEMPLATE_PATH}}
+        service_name="{{cookiecutter.service_name}}"
+        service_slug="{{cookiecutter.service_slug}}"
+        service_short_slug="{{cookiecutter.service_short_slug}}"
+    vars:
+      TEMPLATE_PATH: '{{ "{{" }}.TEMPLATE_PATH | default "https://github.com/ovsds/template-service-python"}}'
+
+  ci-image-build:
+    desc: Build image target for CI usage
+    requires:
+      vars:
+        - IMAGE_TAG
+        - IMAGE_REGISTRY
+    cmds:
+      - task: image-build
+        vars:
+          TARGET: runtime
+          TAG: "{{ "{{" }}.IMAGE_REGISTRY}}/{{ "{{" }}.IMAGE_NAME}}:{{ "{{" }}.IMAGE_TAG}}"
+
+  ci-image-push:
+    desc: Push image to registry for CI usage
+    requires:
+      vars:
+        - IMAGE_TAG
+        - IMAGE_REGISTRY
+    cmds:
+      - echo 'Uploading backend image...'
+      - docker push {{ "{{" }}.IMAGE_REGISTRY}}/{{ "{{" }}.IMAGE_NAME}}:{{ "{{" }}.IMAGE_TAG}}
