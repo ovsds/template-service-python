@@ -1,0 +1,5 @@
+{
+  "service_name": "Placeholder",
+  "service_slug": "{{ cookiecutter.service_name.lower().replace(' ',  '-') }}",
+  "_empty_guard": ""
+}

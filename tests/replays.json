@@ -1,0 +1,12 @@
+{
+  "default_parameters": {
+    "service_name": "Test Service",
+    "service_slug": "test_service"
+  },
+  "replays": [
+    {
+      "name": "Default",
+      "parameters": {}
+    }
+  ]
+}
