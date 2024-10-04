@@ -4,6 +4,7 @@ silent: true
 
 vars:
   NENV: "node_modules"
+  TEST_RESULTS: ".test_results"
 
 tasks:
   _prettier:
@@ -45,12 +46,16 @@ tasks:
     desc: Test project
     cmds:
       - echo 'Running tests...'
+      - python -m tests
 
   clean:
     desc: Clean project environment
     cmds:
       - echo 'Cleaning node dependencies...'
       - rm -rf {{.NENV}}
+
+      - echo 'Cleaning test results...'
+      - rm -rf {{.TEST_RESULTS}}
 
   dependencies-update:
     desc: Update dependencies
@@ -75,6 +80,9 @@ tasks:
         project_name="Template Service Python"
         project_slug="template-service-python"
         node_version="v20.15.1"
-        github_owner="ovsds"
+        owner_name="Dmitry Ovsiannikov"
+        owner_github_login="ovsds"
+        scripts="false"
+        services=""
     vars:
       TEMPLATE_PATH: '{{.TEMPLATE_PATH | default "https://github.com/ovsds/template-repository"}}'

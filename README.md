@@ -6,6 +6,16 @@ Template Service Python
 
 ## Usage
 
+### Global dependencies
+
+- cookiecutter
+
+### Basic usage
+
+```shell
+cookiecutter https://github.com/ovsds/template-service-python
+```
+
 ## Development
 
 ### Global dependencies

@@ -10,3 +10,6 @@ node_modules/
 
 # Environment
 .env
+
+# Test results
+/.test_results/
