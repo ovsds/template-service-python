@@ -7,6 +7,18 @@
     {
       "name": "Default",
       "parameters": {}
+    },
+    {
+      "name": "With Trivy",
+      "parameters": {
+        "with_trivy": "true"
+      }
+    },
+    {
+      "name": "All",
+      "parameters": {
+        "with_trivy": "true"
+      }
     }
   ]
 }

@@ -8,7 +8,7 @@ Template Service Python
 
 ### Global dependencies
 
-- cookiecutter
+- [cookiecutter](https://cookiecutter.readthedocs.io/en/stable/installation.html)
 
 ### Basic usage
 
@@ -20,8 +20,8 @@ cookiecutter https://github.com/ovsds/template-service-python
 
 ### Global dependencies
 
-- nvm
-- node
+- [Taskfile](https://taskfile.dev/installation/)
+- [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#install--update-script)
 
 ### Taskfile commands
 

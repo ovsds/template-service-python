@@ -9,7 +9,7 @@ on:
 
 jobs:
   check-pr:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     permissions:
       contents: read
@@ -20,6 +20,10 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup_environment
+        with:
+          python-enabled: true
+          poetry-enabled: true
+          cookiecutter-enabled: true
 
       - name: Install Dependencies
         run: |
