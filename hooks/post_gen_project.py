@@ -14,4 +14,5 @@ def remove_file(file_path: str, missing_ok: bool = True) -> None:
 
 
 if __name__ == "__main__":
-    ...
+    if "{{ cookiecutter.with_trivy }}" != "true":
+        remove_file("trivy.yaml")

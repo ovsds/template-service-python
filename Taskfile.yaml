@@ -63,6 +63,11 @@ tasks:
       - echo 'Updating node dependencies...'
       - task: _with_nvm
         vars: { COMMAND: "npm update" }
+
+  dependencies-check:
+    desc: Check dependencies
+    cmds:
+      - echo 'Checking node dependencies...'
       - task: _with_nvm
         vars: { COMMAND: "npm outdated" }
       - task: _with_nvm
@@ -77,12 +82,15 @@ tasks:
         --overwrite-if-exists
         --output-dir ../
         {{.TEMPLATE_PATH}}
-        project_name="Template Service Python"
-        project_slug="template-service-python"
-        node_version="v20.15.1"
-        owner_name="Dmitry Ovsiannikov"
-        owner_github_login="ovsds"
-        scripts="false"
-        services=""
+        project_name='Template Service Python'
+        project_slug='template-service-python'
+        node_version='v20.15.1'
+        owner_name='Dmitry Ovsiannikov'
+        owner_github_login='ovsds'
+        scripts='false'
+        services=''
+        with_python='true'
+        with_cookiecutter='true'
+        with_trivy='false'
     vars:
       TEMPLATE_PATH: '{{.TEMPLATE_PATH | default "https://github.com/ovsds/template-repository"}}'

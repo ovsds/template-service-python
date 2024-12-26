@@ -6,39 +6,59 @@ inputs:
     description: "Task version"
     required: true
     default: "3.33.1"
+  task-enabled:
+    description: "Task enabled"
+    required: true
+    default: "true"
   python-version:
     description: "Python version"
     required: true
     default: "3.12.1"
+  python-enabled:
+    description: "Python enabled"
+    required: true
+    default: "false"
   poetry-version:
     description: "Poetry version"
     required: true
     default: "1.7.1"
+  poetry-enabled:
+    description: "Poetry enabled"
+    required: true
+    default: "false"
   cookiecutter-version:
     description: "Cookiecutter version"
     required: true
     default: "2.4.0"
+  cookiecutter-enabled:
+    description: "Cookiecutter enabled"
+    required: true
+    default: "false"
 
 runs:
   using: "composite"
   steps:
-    - name: Install Task
+    - name: Setup Task
+      if: ${{ inputs.task-enabled == 'true' }}
       uses: arduino/setup-task@v1
       with:
         version: ${{ inputs.task-version }}
 
-    - name: Install Python
+    - name: Setup Python
+      if: ${{ inputs.python-enabled == 'true' }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Install and configure Poetry
+    - name: Setup Poetry
+      if: ${{ inputs.poetry-enabled == 'true' }}
       uses: snok/install-poetry@v1
       with:
         version: ${{ inputs.poetry-version }}
 
-    - name: Install Cookiecutter
+    - name: Setup Cookiecutter
+      if: ${{ inputs.cookiecutter-enabled == 'true' }}
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install cookiecutter==${{ inputs.cookiecutter-version }}
+        python -m pip install cookiecutter==${{ inputs.cookiecutter-version }}

@@ -11,7 +11,7 @@ vars:
   PYTHON_FILES:
     sh: find {{ "{{" }}.SOURCE_FOLDERS}} -name '*.py' | tr '\n' ' '
 
-  IMAGE_NAME: "{{cookiecutter.service_slug}}"
+  DEFAULT_IMAGE_NAME: "{{cookiecutter.service_slug}}"
 
 tasks:
   _python:
@@ -111,18 +111,33 @@ tasks:
       - echo 'Running pyright fixes...'
       - task: _pyright
 
-  image-build:
-    desc: Build image target for local usage
+  image-bake:
+    cmds:
+      - echo 'Building image {{ "{{" }}.TARGET}}...'
+      - docker buildx bake {{ "{{" }}.TARGET}}
+
+  image-run:
+    desc: Run image in container
     requires:
       vars:
         - TARGET
     cmds:
-      - echo 'Building image {{ "{{" }}.TARGET}} target...'
-      - docker build
-        --tag {{ "{{" }}.IMAGE_NAME}}:{{ "{{" }}.TARGET}}
-        {{ "{{" }} if .TAG }}--tag {{ "{{" }}.TAG}}{{ "{{" }} end }}
-        --target {{ "{{" }}.TARGET}}
-        .
+      - echo 'Running image {{ "{{" }}.TARGET}} target...'
+      - docker run
+        --env-file <( env| cut -f1 -d= )
+        {{ "{{" }}.DEFAULT_IMAGE_NAME}}:{{ "{{" }}.TARGET}}
+{%- if cookiecutter.with_trivy == 'true' %}
+
+  image-scan:
+    desc: Scan image for vulnerabilities
+    cmds:
+      - echo 'Scanning image for vulnerabilities...'
+      - trivy image
+        --config trivy.yaml
+        {{ "{{" }}.DEFAULT_IMAGE_NAME}}:{{ "{{" }}.TARGET}}
+    vars:
+      TARGET: '{{ "{{" }}.TARGET | default "runtime"}}'
+{%- endif %}
 
   test:
     desc: Run tests
@@ -133,12 +148,10 @@ tasks:
   test-container:
     desc: Run tests in container
     cmds:
-      - task: image-build
+      - task: image-bake
+        vars: { TARGET: tests_dev }
+      - task: image-run
         vars: { TARGET: tests }
-
-      - echo 'Running tests...'
-      - docker run
-        {{ "{{" }}.IMAGE_NAME}}:tests
 
   test-coverage-run:
     desc: Run tests with coverage
@@ -183,6 +196,11 @@ tasks:
     cmds:
       - echo 'Updating python dependencies...'
       - poetry update
+
+  dependencies-check:
+    desc: Check python dependencies
+    cmds:
+      - echo 'Checking python dependencies...'
       - poetry show --outdated
 
   dev-server-start:
@@ -194,12 +212,10 @@ tasks:
   dev-server-start-container:
     desc: Start development application in container
     cmds:
-      - task: image-build
+      - task: image-bake
+        vars: { TARGET: runtime_dev }
+      - task: image-run
         vars: { TARGET: runtime }
-
-      - echo 'Running container...'
-      - docker run
-        {{ "{{" }}.IMAGE_NAME}}:runtime
 
   update-from-template:
     desc: Update project from template
@@ -213,20 +229,9 @@ tasks:
         service_name="{{cookiecutter.service_name}}"
         service_slug="{{cookiecutter.service_slug}}"
         service_short_slug="{{cookiecutter.service_short_slug}}"
+        with_trivy="{{cookiecutter.with_trivy}}"
     vars:
       TEMPLATE_PATH: '{{ "{{" }}.TEMPLATE_PATH | default "https://github.com/ovsds/template-service-python"}}'
-
-  ci-image-build:
-    desc: Build image target for CI usage
-    requires:
-      vars:
-        - IMAGE_TAG
-        - IMAGE_REGISTRY
-    cmds:
-      - task: image-build
-        vars:
-          TARGET: runtime
-          TAG: "{{ "{{" }}.IMAGE_REGISTRY}}/{{ "{{" }}.IMAGE_NAME}}:{{ "{{" }}.IMAGE_TAG}}"
 
   ci-image-push:
     desc: Push image to registry for CI usage
@@ -235,5 +240,22 @@ tasks:
         - IMAGE_TAG
         - IMAGE_REGISTRY
     cmds:
-      - echo 'Uploading backend image...'
-      - docker push {{ "{{" }}.IMAGE_REGISTRY}}/{{ "{{" }}.IMAGE_NAME}}:{{ "{{" }}.IMAGE_TAG}}
+      - task: image-bake
+        vars: { TARGET: runtime }
+
+{%- if cookiecutter.with_trivy == 'true' %}
+
+  ci-image-scan:
+    desc: Scan image for vulnerabilities
+    requires:
+      vars:
+        - IMAGE_TAG
+        - IMAGE_REGISTRY
+        - IMAGE_NAME
+    cmds:
+      - trivy image
+        --config trivy.yaml
+        {{ "{{" }}.IMAGE_REGISTRY}}/{{ "{{" }}.IMAGE_NAME}}:{{ "{{" }}.IMAGE_TAG}}
+    env:
+      TRIVY_DISABLE_VEX_NOTICE: "true"
+{%- endif %}
