@@ -32,9 +32,7 @@ tasks:
   _sort_all:
     internal: true
     cmds:
-      - cmd: "{{ "{{" }}.PENV}}/bin/sort-all {{ "{{" }}.COMMAND}} || [ {{ "{{" }}.IGNORE_ERRORS}} = 'true' ]"
-    vars:
-      IGNORE_ERRORS: '{{ "{{" }}.IGNORE_ERRORS | default "true"}}'
+      - cmd: "{{ "{{" }}.PENV}}/bin/sort-all {{ "{{" }}.COMMAND}}"
 
   _deptry:
     internal: true
@@ -69,9 +67,7 @@ tasks:
 
       - echo 'Running sort-all autofixes...'
       - task: _sort_all
-        vars:
-          COMMAND: "{{ "{{" }}.PYTHON_FILES}}"
-          IGNORE_ERRORS: "false"
+        vars: { COMMAND: "--check {{ "{{" }}.PYTHON_FILES}}" }
       - echo ''
 
       - echo 'Running ruff checks...'
@@ -102,7 +98,7 @@ tasks:
 
       - echo 'Running sort-all fixes...'
       - task: _sort_all
-        vars: { COMMAND: "{{ "{{" }}.PYTHON_FILES}}" }
+        vars: { COMMAND: "--no-error-on-fix {{ "{{" }}.PYTHON_FILES}}" }
 
       - echo 'Running ruff fixes...'
       - task: _python
