@@ -1,8 +1,8 @@
 {
   "*.py": [
     ".venv/bin/python -m black --check",
-    ".venv/bin/python -m sort_all",
-    ".venv/bin/python -m ruff",
+    ".venv/bin/python -m sort_all --check",
+    ".venv/bin/python -m ruff check",
     "../node_modules/.bin/pyright"
   ],
   "*.toml": [".venv/bin/toml-sort --check"]

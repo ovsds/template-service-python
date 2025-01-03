@@ -6,7 +6,7 @@ import pydantic_settings
 import lib.utils.logging as logging_utils
 
 
-class AppSettings(pydantic_settings.BaseSettings):
+class AppSettings(pydantic.BaseModel):
     env: str = "production"
     debug: bool = False
 
@@ -16,13 +16,13 @@ class AppSettings(pydantic_settings.BaseSettings):
 
     @property
     def is_debug(self) -> bool:
-        if not self.is_development:
+        if not self.is_development and self.debug:
             warnings.warn("APP_DEBUG is True in non-development environment", UserWarning)
 
         return self.debug
 
 
-class LoggingSettings(pydantic_settings.BaseSettings):
+class LoggingSettings(pydantic.BaseModel):
     level: logging_utils.LogLevel = "INFO"
     format: str = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
 
@@ -53,7 +53,5 @@ class Settings(pydantic_settings.BaseSettings):
 
 
 __all__ = [
-    "AppSettings",
-    "LoggingSettings",
     "Settings",
 ]
