@@ -22,5 +22,6 @@ class ServerRuntimeError(ApplicationError):
 __all__ = [
     "ApplicationError",
     "DisposeError",
+    "ServerRuntimeError",
     "ServerStartError",
 ]

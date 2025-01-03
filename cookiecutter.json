@@ -3,5 +3,6 @@
   "service_slug": "{{ cookiecutter.service_name.lower().replace(' ',  '-') }}",
   "service_short_slug": "{{ cookiecutter.service_slug }}",
   "with_trivy": "false",
+  "with_ngrok": "false",
   "_empty_guard": ""
 }

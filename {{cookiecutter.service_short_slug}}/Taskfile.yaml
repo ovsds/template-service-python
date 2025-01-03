@@ -13,6 +13,12 @@ vars:
 
   DEFAULT_IMAGE_NAME: "{{cookiecutter.service_slug}}"
 
+{%- if cookiecutter.with_ngrok == 'true' %}
+
+env:
+  NGROK_PORT: "8080"
+{%- endif %}
+
 tasks:
   _python:
     internal: true
@@ -65,7 +71,7 @@ tasks:
       - task: _toml-sort
         vars: { COMMAND: "--check {{ "{{" }}.TOML_FILES}}" }
 
-      - echo 'Running sort-all autofixes...'
+      - echo 'Running sort-all checks...'
       - task: _sort_all
         vars: { COMMAND: "--check {{ "{{" }}.PYTHON_FILES}}" }
       - echo ''
@@ -139,7 +145,8 @@ tasks:
     desc: Run tests
     cmds:
       - echo 'Running pytest...'
-      - "{{ "{{" }}.PENV}}/bin/python -m pytest tests"
+      - task: _python
+        vars: { COMMAND: "-m pytest" }
 
   test-container:
     desc: Run tests in container
@@ -153,20 +160,24 @@ tasks:
     desc: Run tests with coverage
     cmds:
       - echo 'Running test coverage...'
-      - "{{ "{{" }}.PENV}}/bin/python -m coverage run -m pytest tests"
+      - task: _python
+        vars: { COMMAND: "-m coverage run -m pytest tests" }
 
   test-coverage-report:
     desc: Show test coverage report
     cmds:
       - echo 'Reporting test coverage...'
-      - "{{ "{{" }}.PENV}}/bin/python -m coverage report -m"
+      - task: _python
+        vars: { COMMAND: "-m coverage report -m" }
 
   test-coverage-html:
     desc: Show test coverage report in browser
     cmds:
       - echo 'Generating test coverage report...'
-      - "{{ "{{" }}.PENV}}/bin/python -m coverage html"
-      - "{{ "{{" }}.PENV}}/bin/python -m webbrowser -t {{ "{{" }}.coverage_html}}"
+      - task: _python
+        vars: { COMMAND: "-m coverage html" }
+      - task: _python
+        vars: { COMMAND: "-m webbrowser -t {{ "{{" }}.coverage_html}}" }
     vars:
       coverage_html:
         sh: "[ $(uname) = 'Darwin' ] && echo 'file://$(pwd)/htmlcov/index.html' || echo 'htmlcov/index.html'"
@@ -203,7 +214,18 @@ tasks:
     desc: Start development application
     cmds:
       - echo 'Starting server...'
-      - "{{ "{{" }}.PENV}}/bin/python -m bin.main"
+      - task: _python
+        vars: { COMMAND: "-m bin.main" }
+{%- if cookiecutter.with_ngrok == 'true' %}
+
+  dev-server-tunnel-start:
+    desc: Start ngrok tunnel for development application
+    cmds:
+      - echo 'Setting up ngrok...'
+      - ngrok config add-authtoken $NGROK_AUTH_TOKEN
+      - echo 'Starting ngrok tunnel...'
+      - ngrok http --domain=$NGROK_DOMAIN $NGROK_PORT
+{%- endif %}
 
   dev-server-start-container:
     desc: Start development application in container
@@ -226,6 +248,7 @@ tasks:
         service_slug="{{cookiecutter.service_slug}}"
         service_short_slug="{{cookiecutter.service_short_slug}}"
         with_trivy="{{cookiecutter.with_trivy}}"
+        with_ngrok="{{cookiecutter.with_ngrok}}"
     vars:
       TEMPLATE_PATH: '{{ "{{" }}.TEMPLATE_PATH | default "https://github.com/ovsds/template-service-python"}}'
 
