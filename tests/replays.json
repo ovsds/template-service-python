@@ -15,9 +15,38 @@
       }
     },
     {
+      "name": "With Ngrok",
+      "parameters": {
+        "with_ngrok": "true"
+      }
+    },
+    {
+      "name": "With Aiogram utils",
+      "parameters": {
+        "with_aiogram_utils": "true"
+      }
+    },
+    {
+      "name": "With Aiohttp utils",
+      "parameters": {
+        "with_aiohttp_utils": "true",
+        "with_json_utils": "true"
+      }
+    },
+    {
+      "name": "With json utils",
+      "parameters": {
+        "with_json_utils": "true"
+      }
+    },
+    {
       "name": "All",
       "parameters": {
-        "with_trivy": "true"
+        "with_trivy": "true",
+        "with_ngrok": "true",
+        "with_aiogram_utils": "true",
+        "with_aiohttp_utils": "true",
+        "with_json_utils": "true"
       }
     }
   ]

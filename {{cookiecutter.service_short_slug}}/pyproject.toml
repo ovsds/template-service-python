@@ -33,8 +33,17 @@ name = "{{cookiecutter.service_slug}}"
 version = "0.0.1"
 
 [tool.poetry.dependencies]
-pydantic = "^2.0.2"
-pydantic-settings = "^2.0.1"
+{%- if cookiecutter.with_aiogram_utils == "true" %}
+aiogram = "^3.17.0"
+{%- endif %}
+{%- if cookiecutter.with_aiohttp_utils == "true" %}
+aiohttp = "^3.11.11"
+{%- endif %}
+{%- if cookiecutter.with_json_utils == "true" %}
+orjson = "^3.10.13"
+{%- endif %}
+pydantic = "^2.10.4"
+pydantic-settings = "^2.7.1"
 python = "~3.12"
 
 [tool.poetry.group.dev]

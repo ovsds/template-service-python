@@ -17,4 +17,13 @@ if __name__ == "__main__":
     if "{{ cookiecutter.with_trivy }}" != "true":
         remove_file("trivy.yaml")
 
+    if "{{ cookiecutter.with_aiogram_utils }}" != "true":
+        remove_folder("lib/utils/aiogram")
+
+    if "{{ cookiecutter.with_aiohttp_utils }}" != "true":
+        remove_folder("lib/utils/aiohttp")
+
+    if "{{ cookiecutter.with_json_utils }}" != "true":
+        remove_file("lib/utils/json.py")
+
     remove_file("lib/utils/lifecycle_manager.py") # moved to lib/utils/lifecycle.py
