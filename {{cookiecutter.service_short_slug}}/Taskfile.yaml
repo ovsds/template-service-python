@@ -249,6 +249,9 @@ tasks:
         service_short_slug="{{cookiecutter.service_short_slug}}"
         with_trivy="{{cookiecutter.with_trivy}}"
         with_ngrok="{{cookiecutter.with_ngrok}}"
+        with_aiogram_utils="{{cookiecutter.with_aiogram_utils}}"
+        with_aiohttp_utils="{{cookiecutter.with_aiohttp_utils}}"
+        with_json_utils="{{cookiecutter.with_json_utils}}"
     vars:
       TEMPLATE_PATH: '{{ "{{" }}.TEMPLATE_PATH | default "https://github.com/ovsds/template-service-python"}}'
 
