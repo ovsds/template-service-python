@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import http
 import typing
 
@@ -18,7 +16,7 @@ class Response(aiohttp_web.Response):
         reason: str | None = None,
         headers: aiohttp_typedefs.LooseHeaders | None = None,
         content_type: str | None = None,
-    ) -> Response:
+    ) -> typing.Self:
         return cls(
             body=body,
             status=status,
@@ -35,7 +33,7 @@ class Response(aiohttp_web.Response):
         reason: str | None = None,
         headers: aiohttp_typedefs.LooseHeaders | None = None,
         content_type: str | None = None,
-    ) -> Response:
+    ) -> typing.Self:
         return cls(
             text=text,
             status=status,
@@ -51,7 +49,7 @@ class Response(aiohttp_web.Response):
         status: int = http.HTTPStatus.OK,
         reason: str | None = None,
         headers: aiohttp_typedefs.LooseHeaders | None = None,
-    ) -> Response:
+    ) -> typing.Self:
         body = json_utils.dumps_bytes(data)
         return cls.with_bytes(
             body=body,
@@ -62,7 +60,7 @@ class Response(aiohttp_web.Response):
         )
 
     @classmethod
-    def with_error(cls, status: int, problem: str, message: str, details: typing.Any = None) -> Response:
+    def with_error(cls, status: int, problem: str, message: str, details: typing.Any = None) -> typing.Self:
         data = {"code": f"{status}_{problem}", "message": message}
         if details is not None:
             data["details"] = details
