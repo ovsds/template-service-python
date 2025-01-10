@@ -1,3 +1,4 @@
+import os
 import subprocess
 import typing
 
@@ -9,10 +10,17 @@ class CommandError(Exception):
         self.command = command
 
 
-def run_command(command: str, cwd: typing.Optional[str] = None) -> None:
+def run_command(
+    command: str,
+    cwd: typing.Optional[str] = None,
+    envs: typing.Optional[dict[str, str]] = None,
+) -> None:
+    if envs is None:
+        envs = {}
+
     print(f"Running command {command}...")
     try:
-        subprocess.run(command, cwd=cwd, check=True, shell=True)
+        subprocess.run(command, cwd=cwd, check=True, shell=True, env={**os.environ, **envs})
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.decode("utf-8") if exc.stderr else ""
         exit_code = exc.returncode

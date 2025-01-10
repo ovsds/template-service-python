@@ -3,6 +3,17 @@
     "service_name": "Test Service",
     "service_slug": "test_service"
   },
+  "commands": [
+    "git init",
+    "task -v init",
+    "task -v dev-server-start",
+    "task -v dev-server-start-container",
+    "task -v lint ROOT_NENV=../../node_modules",
+    "task -v lint-fix ROOT_NENV=../../node_modules",
+    "task -v test",
+    "task -v test-container",
+    "task -v clean"
+  ],
   "replays": [
     {
       "name": "Default",
@@ -18,6 +29,15 @@
       "name": "With Ngrok",
       "parameters": {
         "with_ngrok": "true"
+      }
+    },
+    {
+      "name": "With Docker",
+      "parameters": {
+        "with_docker": "true"
+      },
+      "envs": {
+        "DOCKER_NETWORK": "default"
       }
     },
     {
@@ -44,9 +64,13 @@
       "parameters": {
         "with_trivy": "true",
         "with_ngrok": "true",
+        "with_docker": "true",
         "with_aiogram_utils": "true",
         "with_aiohttp_utils": "true",
         "with_json_utils": "true"
+      },
+      "envs": {
+        "DOCKER_NETWORK": "default"
       }
     }
   ]
