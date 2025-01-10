@@ -16,6 +16,9 @@ RUN mkdir --parents /opt/app
 COPY --from=sources bin /opt/app/bin
 COPY --from=sources lib /opt/app/lib
 
+ARG APP_VERSION
+ENV APP__VERSION=${APP_VERSION}
+
 WORKDIR /opt/app
 CMD [".venv/bin/python", "-m", "bin.main"]
 

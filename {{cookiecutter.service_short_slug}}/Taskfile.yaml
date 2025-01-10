@@ -12,11 +12,18 @@ vars:
     sh: find {{ "{{" }}.SOURCE_FOLDERS}} -name '*.py' | tr '\n' ' '
 
   DEFAULT_IMAGE_NAME: "{{cookiecutter.service_slug}}"
+{%- if cookiecutter.with_docker == 'true' %}
 
-{%- if cookiecutter.with_ngrok == 'true' %}
+  DOCKER_FOLDER: "{{ "{{" }}.TASKFILE_DIR}}/../docker"
+{%- endif %}
 
 env:
-  NGROK_PORT: "8080"
+  SETTINGS_PATH: "{{ "{{" }}.TASKFILE_DIR}}/dev_settings.yaml"
+{%- if cookiecutter.with_docker == 'true' %}
+  SETTINGS_DOCKER_PATH: "{{ "{{" }}.TASKFILE_DIR}}/dev_docker_settings.yaml"
+{%- endif %}
+{%- if cookiecutter.with_ngrok == 'true' %}
+  APP_PORT: "8080"
 {%- endif %}
 
 tasks:
@@ -24,6 +31,10 @@ tasks:
     internal: true
     cmds:
       - "{{ "{{" }}.PENV}}/bin/python {{ "{{" }}.COMMAND}}"
+  {%- if cookiecutter.with_docker == 'true' %}
+    dotenv:
+      - "{{ "{{" }}.DOCKER_FOLDER}}/.env"
+  {%- endif %}
 
   _pyright:
     internal: true
@@ -126,8 +137,25 @@ tasks:
     cmds:
       - echo 'Running image {{ "{{" }}.TARGET}} target...'
       - docker run
+        {%- if cookiecutter.with_docker == 'true' %}
+        --network ${DOCKER_NETWORK}
+        {%- endif %}
         --env-file <( env| cut -f1 -d= )
+        --volume ${SETTINGS_PATH}:/settings.yaml
+        {%- if cookiecutter.with_docker == 'true' %}
+        --volume ${SETTINGS_DOCKER_PATH}:/docker_settings.yaml
+        {%- endif %}
+        {%- if cookiecutter.with_docker == 'true' %}
+        --env SETTINGS_PATH="/docker_settings.yaml:/settings.yaml"
+        {%- else %}
+        --env SETTINGS_PATH="/settings.yaml"
+        {%- endif %}
         {{ "{{" }}.DEFAULT_IMAGE_NAME}}:{{ "{{" }}.TARGET}}
+    {%- if cookiecutter.with_docker == 'true' %}
+    dotenv:
+      - "{{ "{{" }}.DOCKER_FOLDER}}/.env"
+    {%- endif %}
+
 {%- if cookiecutter.with_trivy == 'true' %}
 
   image-scan:
@@ -224,7 +252,7 @@ tasks:
       - echo 'Setting up ngrok...'
       - ngrok config add-authtoken $NGROK_AUTH_TOKEN
       - echo 'Starting ngrok tunnel...'
-      - ngrok http --domain=$NGROK_DOMAIN $NGROK_PORT
+      - ngrok http --domain=$NGROK_DOMAIN {{ "{{" }}.APP_PORT}}
 {%- endif %}
 
   dev-server-start-container:
@@ -234,6 +262,21 @@ tasks:
         vars: { TARGET: runtime_dev }
       - task: image-run
         vars: { TARGET: runtime }
+{%- if cookiecutter.with_docker == 'true' %}
+
+  dev-auxiliary-start:
+    desc: Start auxiliary services
+    cmds:
+      - echo 'Starting auxiliary containers...'
+      - task -d {{ "{{" }}.DOCKER_FOLDER}} build ENVIRONMENT=DEV
+      - task -d {{ "{{" }}.DOCKER_FOLDER}} start ENVIRONMENT=DEV
+
+  dev-auxiliary-stop:
+    desc: Stop auxiliary services
+    cmds:
+      - echo 'Stopping auxiliary containers...'
+      - task -d {{ "{{" }}.DOCKER_FOLDER}} stop ENVIRONMENT=DEV
+{%- endif %}
 
   update-from-template:
     desc: Update project from template
@@ -249,6 +292,7 @@ tasks:
         service_short_slug="{{cookiecutter.service_short_slug}}"
         with_trivy="{{cookiecutter.with_trivy}}"
         with_ngrok="{{cookiecutter.with_ngrok}}"
+        with_docker="{{cookiecutter.with_docker}}"
         with_aiogram_utils="{{cookiecutter.with_aiogram_utils}}"
         with_aiohttp_utils="{{cookiecutter.with_aiohttp_utils}}"
         with_json_utils="{{cookiecutter.with_json_utils}}"

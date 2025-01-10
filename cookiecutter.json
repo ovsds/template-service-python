@@ -4,6 +4,7 @@
   "service_short_slug": "{{ cookiecutter.service_slug }}",
   "with_trivy": "false",
   "with_ngrok": "false",
+  "with_docker": "false",
   "with_aiogram_utils": "false",
   "with_aiohttp_utils": "false",
   "with_json_utils": "false",

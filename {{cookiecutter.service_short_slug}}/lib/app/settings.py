@@ -1,14 +1,15 @@
 import warnings
 
 import pydantic
-import pydantic_settings
 
 import lib.utils.logging as logging_utils
+import lib.utils.pydantic as pydantic_utils
 
 
-class AppSettings(pydantic.BaseModel):
+class AppSettings(pydantic_utils.BaseSettingsModel):
     env: str = "production"
     debug: bool = False
+    version: str = "unknown"
 
     @property
     def is_development(self) -> bool:
@@ -22,34 +23,14 @@ class AppSettings(pydantic.BaseModel):
         return self.debug
 
 
-class LoggingSettings(pydantic.BaseModel):
+class LoggingSettings(pydantic_utils.BaseSettingsModel):
     level: logging_utils.LogLevel = "INFO"
     format: str = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
 
 
-class Settings(pydantic_settings.BaseSettings):
+class Settings(pydantic_utils.BaseSettings):
     app: AppSettings = pydantic.Field(default_factory=AppSettings)
     logs: LoggingSettings = pydantic.Field(default_factory=LoggingSettings)
-
-    model_config = pydantic_settings.SettingsConfigDict(
-        env_nested_delimiter="__",
-    )
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: type[pydantic_settings.BaseSettings],
-        init_settings: pydantic_settings.PydanticBaseSettingsSource,
-        env_settings: pydantic_settings.PydanticBaseSettingsSource,
-        dotenv_settings: pydantic_settings.PydanticBaseSettingsSource,
-        file_secret_settings: pydantic_settings.PydanticBaseSettingsSource,
-    ) -> tuple[pydantic_settings.PydanticBaseSettingsSource, ...]:
-        return (
-            env_settings,
-            pydantic_settings.YamlConfigSettingsSource(
-                settings_cls,
-            ),
-        )
 
 
 __all__ = [

@@ -15,6 +15,9 @@ target "runtime" {
   inherits = ["base"]
   target = "runtime"
   tags = ["${IMAGE_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"]
+  args = {
+    APP_VERSION = IMAGE_TAG
+  }
   output = ["type=image,push=true"]
   platforms = [
     "linux/amd64",
@@ -33,6 +36,9 @@ target "runtime_dev" {
   target = "runtime_dev"
   output = ["type=docker"]
   tags = ["${IMAGE_NAME}:runtime"]
+  args = {
+    APP_VERSION = "runtime-dev"
+  }
 }
 
 target "tests_dev" {
@@ -40,4 +46,7 @@ target "tests_dev" {
   target = "tests_dev"
   output = ["type=docker"]
   tags = ["${IMAGE_NAME}:tests"]
+  args = {
+    APP_VERSION = "tests-dev"
+  }
 }

@@ -19,6 +19,9 @@
 ### Global dependencies
 
 - [poetry](https://python-poetry.org/docs/#installation)
+{%- if cookiecutter.with_trivy == 'true' %}
+- [trivy](https://trivy.dev/latest/getting-started/installation/) - used for security scanning
+{%- endif %}
 
 ### Taskfile commands
 
