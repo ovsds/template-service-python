@@ -8,6 +8,10 @@ on:
       - synchronize
       - edited
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
 jobs:
   check-pr-title:
     runs-on: ubuntu-latest
@@ -16,6 +20,7 @@ jobs:
       - name: Checkout config file
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: |
             commitlint.config.js
           sparse-checkout-cone-mode: false

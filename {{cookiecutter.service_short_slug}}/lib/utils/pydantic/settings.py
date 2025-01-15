@@ -4,7 +4,7 @@ import typing
 
 import pydantic_settings
 
-import lib.utils.pydantic.base as pydantic_utils_base
+import lib.utils.pydantic.base as base
 
 T = typing.TypeVar("T")
 T_key = typing.TypeVar("T_key")
@@ -33,7 +33,10 @@ class EnvExpandedYamlConfigSettingsSource(pydantic_settings.YamlConfigSettingsSo
         return self._populate_dict(result)
 
 
-class BaseSettingsModel(pydantic_utils_base.BaseModel): ...
+class BaseSettingsModel(base.BaseModel): ...
+
+
+class TypedBaseSettingsModel(base.TypedBaseModel, BaseSettingsModel): ...
 
 
 class BaseSettings(pydantic_settings.BaseSettings):
@@ -90,4 +93,5 @@ __all__ = [
     "BaseSettings",
     "BaseSettingsModel",
     "EnvExpandedYamlConfigSettingsSource",
+    "TypedBaseSettingsModel",
 ]

@@ -16,12 +16,11 @@ vars:
 
   DOCKER_FOLDER: "{{ "{{" }}.TASKFILE_DIR}}/../docker"
 {%- endif %}
+  SETTINGS_FOLDER: "{{ "{{" }}.TASKFILE_DIR}}/.settings"
 
 env:
-  SETTINGS_PATH: "{{ "{{" }}.TASKFILE_DIR}}/dev_settings.yaml"
-{%- if cookiecutter.with_docker == 'true' %}
-  SETTINGS_DOCKER_PATH: "{{ "{{" }}.TASKFILE_DIR}}/dev_docker_settings.yaml"
-{%- endif %}
+  SETTINGS_PATH: "{{ "{{" }}.SETTINGS_FOLDER}}/dev.yaml"
+  SETTINGS_TEST_PATH: "{{ "{{" }}.SETTINGS_FOLDER}}/test.yaml"
 {%- if cookiecutter.with_ngrok == 'true' %}
   APP_PORT: "8080"
 {%- endif %}
@@ -140,15 +139,18 @@ tasks:
         {%- if cookiecutter.with_docker == 'true' %}
         --network ${DOCKER_NETWORK}
         {%- endif %}
+        {{ "{{" }}if any .HOSTNAME}}--hostname {{ "{{" }}.HOSTNAME}}{{ "{{" }} end }}
+        {{ "{{" }}if any .EXPOSED_PORT}}--publish {{ "{{" }}.EXPOSED_PORT}}:{{ "{{" }}.EXPOSED_PORT}}{{ "{{" }} end }}
         --env-file <( env| cut -f1 -d= )
-        --volume ${SETTINGS_PATH}:/settings.yaml
+        --volume {{ "{{" }}.SETTINGS_FOLDER}}:/settings
         {%- if cookiecutter.with_docker == 'true' %}
-        --volume ${SETTINGS_DOCKER_PATH}:/docker_settings.yaml
-        {%- endif %}
-        {%- if cookiecutter.with_docker == 'true' %}
-        --env SETTINGS_PATH="/docker_settings.yaml:/settings.yaml"
+        --env SETTINGS_PATH="/settings/dev_docker.yaml:/settings/dev.yaml"
+        --env SETTINGS_TEST_PATH="/settings/test_docker.yaml:/settings/test.yaml"
+        --env SETTINGS_WORKER_PATH="/settings/worker_docker.yaml:/settings/worker.yaml"
         {%- else %}
-        --env SETTINGS_PATH="/settings.yaml"
+        --env SETTINGS_PATH="/settings/dev.yaml"
+        --env SETTINGS_TEST_PATH="/settings/test.yaml"
+        --env SETTINGS_WORKER_PATH="/settings/worker.yaml"
         {%- endif %}
         {{ "{{" }}.DEFAULT_IMAGE_NAME}}:{{ "{{" }}.TARGET}}
     {%- if cookiecutter.with_docker == 'true' %}
@@ -261,7 +263,10 @@ tasks:
       - task: image-bake
         vars: { TARGET: runtime_dev }
       - task: image-run
-        vars: { TARGET: runtime }
+        vars:
+          TARGET: runtime
+          HOSTNAME: runtime
+          EXPOSED_PORT: "{{ "{{" }}.APP_PORT}}"
 {%- if cookiecutter.with_docker == 'true' %}
 
   dev-auxiliary-start:
@@ -276,6 +281,12 @@ tasks:
     cmds:
       - echo 'Stopping auxiliary containers...'
       - task -d {{ "{{" }}.DOCKER_FOLDER}} stop ENVIRONMENT=DEV
+
+  dev-auxiliary-clean:
+    desc: Stop and remove auxiliary services
+    cmds:
+      - echo 'Stopping and removing auxiliary containers...'
+      - task -d {{ "{{" }}.DOCKER_FOLDER}} clean ENVIRONMENT=DEV
 {%- endif %}
 
   update-from-template:
