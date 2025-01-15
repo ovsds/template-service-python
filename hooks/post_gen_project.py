@@ -17,6 +17,10 @@ if __name__ == "__main__":
     if "{{ cookiecutter.with_trivy }}" != "true":
         remove_file("trivy.yaml")
 
+    if "{{ cookiecutter.with_docker }}" != "true":
+        remove_file(".settings/dev_docker.yaml")
+        remove_file(".settings/test_docker.yaml")
+
     if "{{ cookiecutter.with_aiogram_utils }}" != "true":
         remove_folder("lib/utils/aiogram")
 

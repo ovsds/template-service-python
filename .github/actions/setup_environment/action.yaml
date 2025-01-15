@@ -34,13 +34,21 @@ inputs:
     description: "Cookiecutter enabled"
     required: true
     default: "false"
+  zizmor-version:
+    description: "Zizmor version"
+    required: true
+    default: "1.0.1"
+  zizmor-enabled:
+    description: "Zizmor enabled"
+    required: true
+    default: "false"
 
 runs:
   using: "composite"
   steps:
     - name: Setup Task
       if: ${{ inputs.task-enabled == 'true' }}
-      uses: arduino/setup-task@v1
+      uses: arduino/setup-task@v2.0.0
       with:
         version: ${{ inputs.task-version }}
 
@@ -61,4 +69,15 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        python -m pip install cookiecutter==${{ inputs.cookiecutter-version }}
+        python -m pip install "cookiecutter==${COOKIECUTTER_VERSION}"
+      env:
+        COOKIECUTTER_VERSION: ${{ inputs.cookiecutter-version }}
+
+    - name: Setup Zizmor
+      if: ${{ inputs.zizmor-enabled == 'true' }}
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install "zizmor==${ZIZMOR_VERSION}"
+      env:
+        ZIZMOR_VERSION: ${{ inputs.zizmor-version }}

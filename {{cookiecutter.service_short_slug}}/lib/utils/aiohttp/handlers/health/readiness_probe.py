@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass(frozen=True)
 class SubsystemReadinessCallback:
     name: str
-    is_ready: typing.Awaitable[bool]
+    is_ready: typing.Callable[[], typing.Awaitable[bool]]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -23,7 +23,7 @@ class ReadinessProbeHandler:
         subsystems_status: dict[str, bool] = {}
 
         for subsystem in self.subsystems:
-            is_ready = await subsystem.is_ready
+            is_ready = await subsystem.is_ready()
             subsystems_status[subsystem.name] = is_ready
 
         if all(subsystems_status.values()):
@@ -42,4 +42,5 @@ class ReadinessProbeHandler:
 
 __all__ = [
     "ReadinessProbeHandler",
+    "SubsystemReadinessCallback",
 ]
