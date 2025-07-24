@@ -100,5 +100,6 @@ tasks:
         with_trivy='false'
         with_zizmor='true'
         with_docker='false'
+        with_build='false'
     vars:
       TEMPLATE_PATH: '{{.TEMPLATE_PATH | default "https://github.com/ovsds/template-repository"}}'
