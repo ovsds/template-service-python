@@ -218,6 +218,9 @@ tasks:
       - echo 'Cleaning python dependencies...'
       - rm -rf {{ "{{" }}.PENV}}
 
+      - echo 'Cleaning python cache...'
+      - find . -name __pycache__ -type d -exec rm -rf {} +
+
       - echo 'Cleaning pytest cache...'
       - rm -rf .pytest_cache
 
