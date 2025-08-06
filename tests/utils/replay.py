@@ -10,7 +10,7 @@ import tests.utils.cli as cli_utils
 DEFAULT_RESULTS_PATH = ".test_results"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class Replay:
     name: str
     parameters: dict[str, str]
@@ -32,7 +32,7 @@ class Replay:
         return dataclasses.replace(self, **kwargs)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class ReplaysManifest:
     default_parameters: dict[str, str]
     commands: list[str]
