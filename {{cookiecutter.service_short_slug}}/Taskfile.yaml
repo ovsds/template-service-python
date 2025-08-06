@@ -146,11 +146,9 @@ tasks:
         {%- if cookiecutter.with_docker == 'true' %}
         --env SETTINGS_PATH="/settings/dev_docker.yaml:/settings/dev.yaml"
         --env SETTINGS_TEST_PATH="/settings/test_docker.yaml:/settings/test.yaml"
-        --env SETTINGS_WORKER_PATH="/settings/worker_docker.yaml:/settings/worker.yaml"
         {%- else %}
         --env SETTINGS_PATH="/settings/dev.yaml"
         --env SETTINGS_TEST_PATH="/settings/test.yaml"
-        --env SETTINGS_WORKER_PATH="/settings/worker.yaml"
         {%- endif %}
         {{ "{{" }}.DEFAULT_IMAGE_NAME}}:{{ "{{" }}.TARGET}}
     {%- if cookiecutter.with_docker == 'true' %}
@@ -176,7 +174,7 @@ tasks:
     cmds:
       - echo 'Running pytest...'
       - task: _python
-        vars: { COMMAND: "-m pytest" }
+        vars: { COMMAND: "-m pytest {{ "{{" }}.CLI_ARGS}}" }
 
   test-container:
     desc: Run tests in container

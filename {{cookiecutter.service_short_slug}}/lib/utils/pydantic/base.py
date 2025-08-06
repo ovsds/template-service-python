@@ -8,17 +8,14 @@ import pydantic.fields
 class BaseModel(pydantic.BaseModel): ...
 
 
-BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
-
-
-class TypedMeta(pydantic_model_construction.ModelMetaclass):
-    def __init__(  # pyright: ignore[reportInconsistentConstructor]
+class TypedMeta(pydantic_model_construction.ModelMetaclass, type[BaseModel]):
+    def __new__(
         cls,
-        cls_name: str,
-        bases: tuple[type[typing.Any], ...],
-        namespace: dict[str, typing.Any],
-    ) -> None:
-        cls._classes: dict[str, type[cls]] = {}
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> type[BaseModel]:
+        cls._classes: dict[str, typing.Any] = {}
+        return super().__new__(cls, *args, **kwargs)
 
 
 class TypedBaseModel(BaseModel, metaclass=TypedMeta):
@@ -42,12 +39,12 @@ class TypedBaseModel(BaseModel, metaclass=TypedMeta):
         if not isinstance(data, dict):
             raise ValueError("Data must be dict")
 
-        type_key = cls.model_fields["type_name"].alias
+        type_key = cls.model_fields["type_name"].alias or "type_name"
         if type_key not in data:
             raise ValueError(f"Data must contain '{type_key}' key")
 
-        class_name = typing.cast(str, data[type_key])
-        if not isinstance(class_name, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        class_name = data[type_key]  # pyright: ignore[reportUnknownVariableType]
+        if not isinstance(class_name, str):
             raise ValueError("Type must be string")
 
         if class_name not in cls._classes:  # pyright: ignore[reportPrivateUsage]
@@ -58,22 +55,32 @@ class TypedBaseModel(BaseModel, metaclass=TypedMeta):
         return class_.model_validate(data)
 
     @classmethod
-    def list_factory(cls, data: list[typing.Any]) -> list[BaseModel]:
-        if not isinstance(data, list):  # pyright: ignore[reportUnnecessaryIsInstance]
+    def list_factory(cls, data: typing.Any) -> list[BaseModel]:
+        if not isinstance(data, typing.Sequence):
             raise ValueError("Data must be sequence for list factory")
 
-        return [cls.factory(item) for item in data]
+        result: list[BaseModel] = []
+        for item in data:  # pyright: ignore[reportUnknownVariableType]
+            result.append(cls.factory(item))
+
+        return result
 
     @classmethod
-    def dict_factory(cls, data: dict[str, typing.Any]) -> dict[str, BaseModel]:
-        if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+    def dict_factory(cls, data: typing.Any) -> dict[str, BaseModel]:
+        if not isinstance(data, typing.Mapping):
             raise ValueError("Data must be mapping for dict factory")
 
-        return {key: cls.factory(value) for key, value in data.items()}
+        result: dict[str, BaseModel] = {}
+        for key, value in data.items():  # pyright: ignore[reportUnknownVariableType]
+            if not isinstance(key, str):
+                raise ValueError("Key must be string")
+
+            result[key] = cls.factory(value)
+
+        return result
 
 
 TypedBaseModelT = typing.TypeVar("TypedBaseModelT", bound=TypedBaseModel)
-
 
 if typing.TYPE_CHECKING:
     TypedAnnotation = typing.Annotated[TypedBaseModelT, ...]
@@ -82,21 +89,21 @@ if typing.TYPE_CHECKING:
 else:
 
     class TypedAnnotation:
-        def __class_getitem__(cls, base_class: TypedBaseModelT) -> typing.Any:
+        def __class_getitem__(cls, base_class: TypedBaseModel) -> typing.Any:
             return typing.Annotated[
                 pydantic.SerializeAsAny[base_class],
                 pydantic.BeforeValidator(base_class.factory),
             ]
 
     class TypedListAnnotation:
-        def __class_getitem__(cls, base_class: TypedBaseModelT) -> typing.Any:
+        def __class_getitem__(cls, base_class: TypedBaseModel) -> typing.Any:
             return typing.Annotated[
                 list[pydantic.SerializeAsAny[base_class]],
                 pydantic.BeforeValidator(base_class.list_factory),
             ]
 
     class TypedDictAnnotation:
-        def __class_getitem__(cls, base_class: TypedBaseModelT) -> typing.Any:
+        def __class_getitem__(cls, base_class: TypedBaseModel) -> typing.Any:
             return typing.Annotated[
                 dict[str, pydantic.SerializeAsAny[base_class]],
                 pydantic.BeforeValidator(base_class.dict_factory),

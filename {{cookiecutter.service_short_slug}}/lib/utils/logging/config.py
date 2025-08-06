@@ -13,7 +13,7 @@ def initialize(
     logging_config.dictConfig(config)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class LoggerConfig:
     propagate: bool
     level: LogLevel

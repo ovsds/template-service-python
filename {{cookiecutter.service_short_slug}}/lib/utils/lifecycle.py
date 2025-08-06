@@ -7,7 +7,7 @@ Awaitable = typing.Awaitable[typing.Any]
 Task = asyncio.Task[typing.Any]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class Callback:
     awaitable: Awaitable
     error_message: str
@@ -26,9 +26,11 @@ class Callback:
 class Lifecycle:
     logger: logging.Logger
 
-    main_tasks: typing.Sequence[asyncio.Task[typing.Any]] = dataclasses.field(default_factory=list)
-    startup_callbacks: typing.Sequence[Callback] = dataclasses.field(default_factory=list)
-    shutdown_callbacks: typing.Sequence[Callback] = dataclasses.field(default_factory=list)
+    main_tasks: typing.Sequence[asyncio.Task[typing.Any]] = dataclasses.field(
+        default_factory=list[asyncio.Task[typing.Any]]
+    )
+    startup_callbacks: typing.Sequence[Callback] = dataclasses.field(default_factory=list[Callback])
+    shutdown_callbacks: typing.Sequence[Callback] = dataclasses.field(default_factory=list[Callback])
 
     class StartupError(Exception): ...
 
@@ -43,6 +45,16 @@ class Lifecycle:
             for task in asyncio.as_completed(self.main_tasks):
                 await task
                 raise RuntimeError("One of the main tasks has unexpectedly finished")
+        except asyncio.CancelledError:
+            self.logger.error("The main tasks execution has been cancelled, cancelling all tasks")
+            for task in self.main_tasks:
+                if task.done():
+                    continue
+
+                task.cancel()
+                self.logger.error(f"Task {task.get_name()} has been cancelled")
+
+            raise
         except Exception:
             self.logger.error("An error occurred during the main tasks execution")
 
