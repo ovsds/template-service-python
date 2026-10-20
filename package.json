@@ -2,12 +2,12 @@
   "private": true,
   "name": "template-service-python",
   "devDependencies": {
-    "@commitlint/cli": "^19.6.1",
-    "@commitlint/config-conventional": "^19.6.0",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "husky": "^9.1.7",
-    "lint-staged": "^15.2.11",
-    "prettier": "^3.4.2",
-    "pyright": "^1.1.389"
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "pyright": "^1.1.414"
   },
   "hooks": {
     "pre-commit": "lint-staged",

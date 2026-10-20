@@ -8,7 +8,7 @@ Cookiecutter template for a Python service. I use it to scaffold backend service
 
 ## What you get
 
-Generated layout (Python 3.12, Poetry):
+Generated layout (Python 3.14, Poetry):
 
 - `bin/main/` — service entrypoint package.
 - `lib/app/` — app skeleton: `app.py`, `errors.py`, pydantic-settings-based `settings.py`.
@@ -16,7 +16,7 @@ Generated layout (Python 3.12, Poetry):
 - `tests/{unit,integration,utils}/` — pytest harness with `pytest-asyncio` and `pytest-mock`.
 - `.settings/` — dev/test config YAMLs consumed by pydantic-settings.
 - `pyproject.toml` — Poetry deps + `ruff`, `black`, `pyright` (strict), `coverage`, `deptry`, `sort-all`, `toml-sort` configured.
-- `Taskfile.yaml` — `init`, `lint`, `lint-fix`, `test`, `dependencies-update`, `dependencies-check`, `update-from-template`, etc. (`task --list-all` for the full surface).
+- `mise.toml` and `mise-tasks/` — a [mise monorepo config root](https://mise.jdx.dev/tasks/monorepo.html) with `init`, `lint`, `lint-fix`, `test`, `clean`, `dependencies-update`, `dependencies-check`, `update-from-template`, etc. (`mise tasks ls` for the full surface).
 - `.github/workflows/` — `Check PR` (lint + tests) and `Check PR title` (commitlint).
 - `.lintstagedrc.json`, husky pre-commit, Prettier, commitlint, `.editorconfig`.
 
@@ -24,7 +24,7 @@ Optional, gated by cookiecutter flags answered at generation time:
 
 - `with_docker` — `Dockerfile`, `docker-bake.hcl`, dev/test docker settings YAMLs.
 - `with_trivy` — `trivy.yaml` and the CI scanning hook.
-- `with_ngrok` — Taskfile entry to expose the local app via an ngrok tunnel.
+- `with_ngrok` — mise task to expose the local app via an ngrok tunnel.
 - `with_aiohttp_utils` — `lib/utils/aiohttp/` helpers.
 - `with_aiogram_utils` — `lib/utils/aiogram/` helpers (Telegram bot).
 - `with_json_utils` — `lib/utils/json.py` (orjson wrapper).
@@ -43,13 +43,13 @@ This section is for working on the template itself, not on a generated service.
 
 ### Global dependencies
 
-- [Taskfile](https://taskfile.dev/installation/)
-- [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#install--update-script)
-- [zizmor](https://woodruffw.github.io/zizmor/installation/) — used for GHA security scanning
+- [mise](https://mise.jdx.dev/installing-mise.html), activated in the shell (`eval "$(mise activate zsh)"`)
 
-### Taskfile commands
+All other tools are pinned in [mise.toml](mise.toml).
 
-For all commands see [Taskfile](Taskfile.yaml) or `task --list-all`.
+### mise tasks
+
+For all commands see [mise.toml](mise.toml) or `mise tasks ls`.
 
 ## License
 

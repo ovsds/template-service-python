@@ -5,14 +5,14 @@
   },
   "commands": [
     "git init",
-    "task -v init",
-    "task -v dev-server-start",
-    "task -v dev-server-start-container",
-    "task -v lint ROOT_NENV=../../node_modules",
-    "task -v lint-fix ROOT_NENV=../../node_modules",
-    "task -v test",
-    "task -v test-container",
-    "task -v clean"
+    "mise run init",
+    "mise run dev-server-start",
+    "mise run dev-server-start-container",
+    "mise run lint",
+    "mise run lint-fix",
+    "mise run test",
+    "mise run test-container",
+    "mise run clean"
   ],
   "replays": [
     {
