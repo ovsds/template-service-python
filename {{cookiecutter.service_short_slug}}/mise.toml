@@ -69,6 +69,7 @@ run = [
   "echo 'Running pyright checks...'",
   "npx --no -- pyright",
 ]
+
 [tasks.image-bake]
 description = "Build image target from docker-bake.hcl"
 usage = 'arg "<target>"'
