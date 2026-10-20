@@ -1,4 +1,3 @@
-# monorepo config roots and `//<root>:<task>` references need a recent mise
 min_version = "2026.10.3"
 
 [tools]
@@ -19,7 +18,6 @@ run = [
   "mise install",
 
   "echo 'Installing node dependencies...'",
-  # npm ci never rewrites package-lock.json; a freshly generated project has none yet
   "if [ -f package-lock.json ]; then npm ci; else npm install; fi",
 
   "echo 'Installing husky pre-commit...'",
