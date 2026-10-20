@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Build image target from docker-bake.hcl"
-#USAGE arg "<target>"
-set -euo pipefail
-
-echo "Building image ${usage_target}..."
-docker buildx bake "${usage_target}"
