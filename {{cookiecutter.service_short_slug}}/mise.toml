@@ -2,7 +2,7 @@
 # aiogram supports Python <3.15 only
 {% endif -%}
 [tools]
-python = "{{ '3.14.8' if cookiecutter.with_aiogram_utils == 'true' else '3.15.0' }}"
+python = "{{ cookiecutter.__python_version }}"
 
 [env]
 SETTINGS_PATH = "{{ "{{" }}config_root}}/.settings/dev.yaml"
@@ -231,7 +231,10 @@ run = [
   ''',
 
   "echo 'Updating poetry.lock to the new pyproject.toml...'",
-  "poetry lock",
+  # The task's environment predates the render: a changed Python pin needs a fresh venv and mise environment
+  "rm -rf .venv",
+  "mise install",
+  "mise exec -- poetry lock",
 ]
 
 [tasks.ci-image-push]

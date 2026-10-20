@@ -8,5 +8,8 @@
   "with_aiogram_utils": "false",
   "with_aiohttp_utils": "false",
   "with_json_utils": "false",
+  "__python_version": "{{ '3.14.8' if cookiecutter.with_aiogram_utils == 'true' else '3.15.0' }}",
+  "__python_minor": "{{ '3.14' if cookiecutter.with_aiogram_utils == 'true' else '3.15' }}",
+  "__python_next_minor": "{{ '3.15' if cookiecutter.with_aiogram_utils == 'true' else '3.16' }}",
   "_empty_guard": ""
 }

@@ -5,8 +5,8 @@ variable "IMAGE_TAG" {}
 target "base" {
   dockerfile = "Dockerfile"
   contexts = {
-    "base_builder" = "docker-image://docker.io/library/python:{{ '3.14.8' if cookiecutter.with_aiogram_utils == 'true' else '3.15.0' }}-trixie"
-    "base_runtime" = "docker-image://docker.io/library/python:{{ '3.14.8' if cookiecutter.with_aiogram_utils == 'true' else '3.15.0' }}-slim-trixie"
+    "base_builder" = "docker-image://docker.io/library/python:{{ cookiecutter.__python_version }}-trixie"
+    "base_runtime" = "docker-image://docker.io/library/python:{{ cookiecutter.__python_version }}-slim-trixie"
     "sources" = "."
   }
 }
