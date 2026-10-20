@@ -43,13 +43,13 @@ This section is for working on the template itself, not on a generated service.
 
 ### Global dependencies
 
-- [Taskfile](https://taskfile.dev/installation/)
-- [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#install--update-script)
-- [zizmor](https://woodruffw.github.io/zizmor/installation/) — used for GHA security scanning
+- [mise](https://mise.jdx.dev/installing-mise.html), activated in the shell (`eval "$(mise activate zsh)"`)
 
-### Taskfile commands
+All other tools are pinned in [mise.toml](mise.toml).
 
-For all commands see [Taskfile](Taskfile.yaml) or `task --list-all`.
+### mise tasks
+
+For all commands see [mise.toml](mise.toml) or `mise tasks ls`.
 
 ## License
 
