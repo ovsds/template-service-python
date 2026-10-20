@@ -48,7 +48,7 @@ run = [
 description = "Fix lint issues"
 run = [
   "echo 'Running poetry fixes...'",
-  "poetry lock --no-update",
+  "poetry lock",
   "poetry check",
 
   "echo 'Running deptry checks...'",

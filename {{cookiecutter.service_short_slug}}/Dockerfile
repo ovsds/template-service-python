@@ -8,7 +8,7 @@ COPY --from=sources poetry.lock /opt/app/poetry.lock
 COPY --from=sources poetry.toml /opt/app/poetry.toml
 
 WORKDIR /opt/app
-RUN poetry install
+RUN poetry install --no-root
 
 FROM base_runtime AS common_runtime
 
@@ -30,7 +30,7 @@ COPY --from=builder /opt/app/.venv /opt/app/.venv
 
 FROM common_builder AS builder_dev
 
-RUN poetry install --with dev
+RUN poetry install --no-root --with dev
 
 FROM common_runtime AS runtime_dev
 

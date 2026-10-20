@@ -1,3 +1,4 @@
+import importlib.resources.abc
 import os
 import pathlib
 import typing
@@ -28,7 +29,7 @@ class EnvExpandedYamlConfigSettingsSource(pydantic_settings.YamlConfigSettingsSo
     def _populate_list(self, data: list[T]) -> list[T]:
         return [self._populate(value) for value in data]
 
-    def _read_file(self, file_path: pathlib.Path) -> dict[str, typing.Any]:
+    def _read_file(self, file_path: pathlib.Path | importlib.resources.abc.Traversable) -> dict[str, typing.Any]:
         result = super()._read_file(file_path)
         return self._populate_dict(result)
 

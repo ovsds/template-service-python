@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 
 import lib.app as app
 
@@ -24,17 +25,17 @@ async def run() -> None:
 def main() -> None:
     try:
         asyncio.run(run())
-        exit(os.EX_OK)
+        sys.exit(os.EX_OK)
     except SystemExit:
-        exit(os.EX_OK)
+        sys.exit(os.EX_OK)
     except app.ApplicationError:
-        exit(os.EX_SOFTWARE)
+        sys.exit(os.EX_SOFTWARE)
     except KeyboardInterrupt:
         logger.info("Exited with keyboard interruption")
-        exit(os.EX_OK)
+        sys.exit(os.EX_OK)
     except BaseException:
         logger.exception("Unexpected error occurred")
-        exit(os.EX_SOFTWARE)
+        sys.exit(os.EX_SOFTWARE)
 
 
 if __name__ == "__main__":
