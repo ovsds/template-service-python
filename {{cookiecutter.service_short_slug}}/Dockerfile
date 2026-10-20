@@ -1,6 +1,6 @@
 FROM base_builder AS common_builder
 
-RUN python -m pip install 'poetry>=1.7.0,<1.8.0'
+RUN python -m pip install 'poetry>=2.5.0,<2.6.0'
 
 RUN mkdir --parents /opt/app
 COPY --from=sources pyproject.toml /opt/app/pyproject.toml

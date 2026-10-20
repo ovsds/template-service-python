@@ -31,3 +31,4 @@ if __name__ == "__main__":
         remove_file("lib/utils/json.py")
 
     remove_file("lib/utils/lifecycle_manager.py") # moved to lib/utils/lifecycle.py
+    remove_file("Taskfile.yaml") # replaced by mise.toml

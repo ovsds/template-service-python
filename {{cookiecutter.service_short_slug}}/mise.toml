@@ -1,0 +1,238 @@
+# aiogram supports Python <3.15 only
+[tools]
+python = "3.14.8"
+
+[env]
+SETTINGS_PATH = "{{ "{{" }}config_root}}/.settings/dev.yaml"
+SETTINGS_TEST_PATH = "{{ "{{" }}config_root}}/.settings/test.yaml"
+{%- if cookiecutter.with_ngrok == 'true' %}
+APP_PORT = "8080"
+{%- endif %}
+{%- if cookiecutter.with_docker == 'true' %}
+_.file = "../docker/.env"
+{%- endif %}
+
+[tasks.init]
+description = "Initialize environment"
+run = [
+  "echo 'Installing python dependencies...'",
+  "poetry install --no-root --with dev",
+]
+
+[tasks.lint]
+description = "Run lint checks"
+run = [
+  "echo 'Running poetry checks...'",
+  "poetry check --lock",
+
+  "echo 'Running deptry checks...'",
+  ".venv/bin/deptry .",
+
+  "echo 'Running black checks...'",
+  ".venv/bin/python -m black --check .",
+
+  "echo 'Running toml-sort checks...'",
+  ".venv/bin/toml-sort --check pyproject.toml poetry.toml",
+
+  "echo 'Running sort-all checks...'",
+  ".venv/bin/sort-all --check $(find bin lib tests -name '*.py')",
+
+  "echo 'Running ruff checks...'",
+  ".venv/bin/python -m ruff check bin lib tests",
+
+  "echo 'Running pyright checks...'",
+  "npx --no -- pyright",
+]
+
+[tasks.lint-fix]
+description = "Fix lint issues"
+run = [
+  "echo 'Running poetry fixes...'",
+  "poetry lock --no-update",
+  "poetry check",
+
+  "echo 'Running deptry checks...'",
+  ".venv/bin/deptry .",
+
+  "echo 'Running black fixes...'",
+  ".venv/bin/python -m black --safe .",
+
+  "echo 'Running toml-sort fixes...'",
+  ".venv/bin/toml-sort --in-place pyproject.toml poetry.toml",
+
+  "echo 'Running sort-all fixes...'",
+  ".venv/bin/sort-all --no-error-on-fix $(find bin lib tests -name '*.py')",
+
+  "echo 'Running ruff fixes...'",
+  ".venv/bin/python -m ruff check --fix bin lib tests",
+
+  "echo 'Running pyright checks...'",
+  "npx --no -- pyright",
+]
+{%- if cookiecutter.with_trivy == 'true' %}
+
+[tasks.image-scan]
+description = "Scan image for vulnerabilities"
+usage = 'arg "[target]" default="runtime"'
+run = [
+  "echo 'Scanning image for vulnerabilities...'",
+  'trivy image --config trivy.yaml "{{cookiecutter.service_slug}}:${usage_target}"',
+]
+{%- endif %}
+
+[tasks.test]
+description = "Run tests, extra arguments are passed to pytest"
+run = [
+  "echo 'Running pytest...'",
+  ".venv/bin/python -m pytest",
+]
+
+[tasks.test-container]
+description = "Run tests in container"
+run = [
+  { task = "image-bake tests_dev" },
+  { task = "image-run tests" },
+]
+
+[tasks.test-coverage-run]
+description = "Run tests with coverage"
+run = [
+  "echo 'Running test coverage...'",
+  ".venv/bin/python -m coverage run -m pytest tests",
+]
+
+[tasks.test-coverage-report]
+description = "Show test coverage report"
+run = [
+  "echo 'Reporting test coverage...'",
+  ".venv/bin/python -m coverage report -m",
+]
+
+[tasks.test-coverage-html]
+description = "Show test coverage report in browser"
+run = [
+  "echo 'Generating test coverage report...'",
+  ".venv/bin/python -m coverage html",
+  '.venv/bin/python -m webbrowser -t "file://$PWD/htmlcov/index.html"',
+]
+
+[tasks.clean]
+description = "Clean environment"
+run = [
+  "echo 'Cleaning python dependencies...'",
+  "rm -rf .venv",
+
+  "echo 'Cleaning python cache...'",
+  "find . -name __pycache__ -type d -exec rm -rf {} +",
+
+  "echo 'Cleaning pytest cache...'",
+  "rm -rf .pytest_cache",
+
+  "echo 'Cleaning ruff cache...'",
+  "rm -rf .ruff_cache",
+
+  "echo 'Cleaning coverage results...'",
+  "rm -rf .coverage",
+  "rm -rf htmlcov",
+]
+
+[tasks.dependencies-update]
+description = "Update python dependencies"
+run = [
+  "echo 'Updating python dependencies...'",
+  "poetry update",
+]
+
+[tasks.dependencies-check]
+description = "Check python dependencies"
+run = [
+  "echo 'Checking python dependencies...'",
+  "poetry show --outdated",
+]
+
+[tasks.dev-server-start]
+description = "Start development application"
+run = [
+  "echo 'Starting server...'",
+  ".venv/bin/python -m bin.main",
+]
+{%- if cookiecutter.with_ngrok == 'true' %}
+
+[tasks.dev-server-tunnel-start]
+description = "Start ngrok tunnel for development application"
+run = [
+  "echo 'Setting up ngrok...'",
+  'ngrok config add-authtoken "$NGROK_AUTH_TOKEN"',
+  "echo 'Starting ngrok tunnel...'",
+  'ngrok http --domain="$NGROK_DOMAIN" "$APP_PORT"',
+]
+{%- endif %}
+
+[tasks.dev-server-start-container]
+description = "Start development application in container"
+run = [
+  { task = "image-bake runtime_dev" },
+  { task = "image-run runtime --hostname runtime{% if cookiecutter.with_ngrok == 'true' %} --exposed-port 8080{% endif %}" },
+]
+{%- if cookiecutter.with_docker == 'true' %}
+
+[tasks.dev-auxiliary-start]
+description = "Start auxiliary services"
+run = [
+  "echo 'Starting auxiliary containers...'",
+  "ENVIRONMENT=DEV mise run //docker:build",
+  "ENVIRONMENT=DEV mise run //docker:start",
+]
+
+[tasks.dev-auxiliary-stop]
+description = "Stop auxiliary services"
+run = [
+  "echo 'Stopping auxiliary containers...'",
+  "ENVIRONMENT=DEV mise run //docker:stop",
+]
+
+[tasks.dev-auxiliary-clean]
+description = "Stop and remove auxiliary services"
+run = [
+  "echo 'Stopping and removing auxiliary containers...'",
+  "ENVIRONMENT=DEV mise run //docker:clean",
+]
+{%- endif %}
+
+[tasks.update-from-template]
+description = "Update service from template; TEMPLATE_PATH=<path> in the environment overrides the source"
+run = [
+  "echo 'Updating service from template...'",
+  '''
+  cookiecutter \
+    --no-input \
+    --overwrite-if-exists \
+    --output-dir ../ \
+    "${TEMPLATE_PATH:-https://github.com/ovsds/template-service-python}" \
+    service_name='{{cookiecutter.service_name}}' \
+    service_slug='{{cookiecutter.service_slug}}' \
+    service_short_slug='{{cookiecutter.service_short_slug}}' \
+    with_trivy='{{cookiecutter.with_trivy}}' \
+    with_ngrok='{{cookiecutter.with_ngrok}}' \
+    with_docker='{{cookiecutter.with_docker}}' \
+    with_aiogram_utils='{{cookiecutter.with_aiogram_utils}}' \
+    with_aiohttp_utils='{{cookiecutter.with_aiohttp_utils}}' \
+    with_json_utils='{{cookiecutter.with_json_utils}}'
+  ''',
+]
+
+[tasks.ci-image-push]
+description = "Push image to registry for CI usage; needs IMAGE_REGISTRY and IMAGE_TAG in the environment"
+run = [
+  ': "${IMAGE_REGISTRY:?}" "${IMAGE_TAG:?}"',
+  { task = "image-bake runtime" },
+]
+{%- if cookiecutter.with_trivy == 'true' %}
+
+[tasks.ci-image-scan]
+description = "Scan image for vulnerabilities; needs IMAGE_REGISTRY, IMAGE_NAME and IMAGE_TAG in the environment"
+env = { TRIVY_DISABLE_VEX_NOTICE = "true" }
+run = [
+  'trivy image --config trivy.yaml "${IMAGE_REGISTRY:?}/${IMAGE_NAME:?}:${IMAGE_TAG:?}"',
+]
+{%- endif %}

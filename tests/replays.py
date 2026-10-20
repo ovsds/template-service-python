@@ -1,3 +1,5 @@
+import os
+
 import tests.utils.replay as replay_utils
 
 MANIFEST_PATH = "tests/replays.json"
@@ -16,6 +18,9 @@ def test_replay(replay: replay_utils.Replay):
 
 
 def test_replays():
+    # mise refuses [env] and [settings] of an untrusted config; trust the throwaway results only for this run
+    trusted_paths = [os.environ.get("MISE_TRUSTED_CONFIG_PATHS"), os.path.abspath(RESULTS_PATH)]
+    os.environ["MISE_TRUSTED_CONFIG_PATHS"] = os.pathsep.join(filter(None, trusted_paths))
     for replay in replay_utils.read_replays(MANIFEST_PATH):
         test_replay(replay)
 
