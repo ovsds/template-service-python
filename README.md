@@ -8,7 +8,7 @@ Cookiecutter template for a Python service. I use it to scaffold backend service
 
 ## What you get
 
-Generated layout (Poetry; Python 3.15, or 3.14 with `with_aiogram_utils`, as aiogram supports Python <3.15 only):
+Generated layout (Poetry; Python from `python_version`, default 3.15.0 - aiogram supports Python <3.15 only, so a service with `with_aiogram_utils` sets 3.14.8):
 
 - `bin/main/` — service entrypoint package.
 - `lib/app/` — app skeleton: `app.py`, `errors.py`, pydantic-settings-based `settings.py`.

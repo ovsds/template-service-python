@@ -1,8 +1,5 @@
-{% if cookiecutter.with_aiogram_utils == 'true' -%}
-# aiogram supports Python <3.15 only
-{% endif -%}
 [tools]
-python = "{{ cookiecutter.__python_version }}"
+python = "{{ cookiecutter.python_version }}"
 
 [env]
 SETTINGS_PATH = "{{ "{{" }}config_root}}/.settings/dev.yaml"
@@ -222,6 +219,7 @@ run = [
     service_name='{{cookiecutter.service_name}}' \
     service_slug='{{cookiecutter.service_slug}}' \
     service_short_slug='{{cookiecutter.service_short_slug}}' \
+    python_version='{{cookiecutter.python_version}}' \
     with_trivy='{{cookiecutter.with_trivy}}' \
     with_ngrok='{{cookiecutter.with_ngrok}}' \
     with_docker='{{cookiecutter.with_docker}}' \
