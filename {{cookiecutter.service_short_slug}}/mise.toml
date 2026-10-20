@@ -219,6 +219,9 @@ run = [
     with_aiohttp_utils='{{cookiecutter.with_aiohttp_utils}}' \
     with_json_utils='{{cookiecutter.with_json_utils}}'
   ''',
+
+  "echo 'Updating poetry.lock to the new pyproject.toml...'",
+  "poetry lock",
 ]
 
 [tasks.ci-image-push]
