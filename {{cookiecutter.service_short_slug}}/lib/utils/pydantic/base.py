@@ -9,13 +9,17 @@ class BaseModel(pydantic.BaseModel): ...
 
 
 class TypedMeta(pydantic_model_construction.ModelMetaclass, type[BaseModel]):
+    _classes: dict[str, typing.Any]
+
     def __new__(
         cls,
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> type[BaseModel]:
-        cls._classes: dict[str, typing.Any] = {}
-        return super().__new__(cls, *args, **kwargs)
+        new_class = super().__new__(cls, *args, **kwargs)
+        # Each typed class keeps its own registry; on the metaclass it would be shared and reset by every new class
+        new_class._classes = {}
+        return new_class
 
 
 class TypedBaseModel(BaseModel, metaclass=TypedMeta):

@@ -69,6 +69,14 @@ run = [
   "echo 'Running pyright checks...'",
   "npx --no -- pyright",
 ]
+
+[tasks.image-bake]
+description = "Build image target from docker-bake.hcl"
+usage = 'arg "<target>"'
+run = [
+  'echo "Building image ${usage_target}..."',
+  'docker buildx bake "${usage_target}"',
+]
 {%- if cookiecutter.with_trivy == 'true' %}
 
 [tasks.image-scan]
