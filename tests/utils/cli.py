@@ -1,6 +1,7 @@
 import contextlib
 import os
 import queue
+import shlex
 import signal
 import subprocess
 import threading
@@ -62,10 +63,10 @@ def run_command_until_output(
     # the command gets a session of its own, yet under `mise run test` a nested mise inherits this flag, leaves the
     # group's signals to its parent and never forwards the leader's SIGINT
     environ = {key: value for key, value in os.environ.items() if key != "MISE_TASK_PGID_MANAGED"}
+    # no shell in between: a /bin/sh that does not exec its command (dash) keeps the leader's SIGINT to itself
     process = subprocess.Popen(
-        command,
+        shlex.split(command),
         cwd=cwd,
-        shell=True,
         env={**environ, **envs},
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
