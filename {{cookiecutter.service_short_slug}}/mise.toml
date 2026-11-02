@@ -223,7 +223,6 @@ run = [
     with_trivy='{{cookiecutter.with_trivy}}' \
     with_ngrok='{{cookiecutter.with_ngrok}}' \
     with_docker='{{cookiecutter.with_docker}}' \
-    with_aiogram_utils='{{cookiecutter.with_aiogram_utils}}' \
     with_aiohttp_utils='{{cookiecutter.with_aiohttp_utils}}' \
     with_http_server='{{cookiecutter.with_http_server}}' \
     with_prometheus='{{cookiecutter.with_prometheus}}' \

@@ -5,9 +5,6 @@ requires = ["poetry-core>=2.5.0"]
 [project]
 authors = [{ email = "github@ovsds.ru", name = "ovsds" }]
 dependencies = [
-{%- if cookiecutter.with_aiogram_utils == "true" %}
-  "aiogram (>=3.31.0,<4.0.0)",
-{%- endif %}
 {%- if cookiecutter.__with_aiohttp == "true" %}
   "aiohttp (>=3.14.5,<4.0.0)",
 {%- endif %}

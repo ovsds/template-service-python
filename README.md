@@ -8,7 +8,7 @@ Cookiecutter template for a Python service. I use it to scaffold backend service
 
 ## What you get
 
-Generated layout (Poetry; Python from `python_version`, default 3.15.0 - aiogram supports Python <3.15 only, so a service with `with_aiogram_utils` sets 3.14.8):
+Generated layout (Poetry; Python from `python_version`, default 3.15.0):
 
 - `bin/main/` — service entrypoint package.
 - `lib/app/` — app skeleton: `app.py`, `errors.py`, pydantic-settings-based `settings.py`.
@@ -28,7 +28,6 @@ Optional, gated by cookiecutter flags answered at generation time:
 - `with_aiohttp_utils` — `lib/utils/aiohttp/` helpers.
 - `with_http_server` — aiohttp HTTP server with pydantic-typed handlers, a map-based error middleware, liveness, readiness and startup probes (cached checks of required subsystems), an app-info route, an OpenAPI 3.1 spec built from the handlers' schemas with a CDN-loaded Swagger UI, and host/port settings, implies `with_aiohttp_utils`.
 - `with_prometheus` — Prometheus request counter and duration histogram by route template, served at `GET /metrics`, implies `with_http_server`.
-- `with_aiogram_utils` — `lib/utils/aiogram/` helpers (Telegram bot).
 - `with_json_utils` — `lib/utils/json.py` (orjson wrapper), also included by `with_aiohttp_utils`.
 
 ## Quickstart
