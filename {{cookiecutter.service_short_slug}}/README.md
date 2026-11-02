@@ -13,6 +13,13 @@
 
 - `LOGS__LEVEL` - logging level, can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`. Default is `INFO`.
 - `LOGS__FORMAT` - logging format string, passed to python logging formatter. Default is `%(asctime)s - %(name)s - %(levelname)s - %(message)s`.
+{%- if cookiecutter.with_http_server == 'true' %}
+
+#### HTTP server
+
+- `HTTP_SERVER__HOST` - HTTP server host. Default is `0.0.0.0`.
+- `HTTP_SERVER__PORT` - HTTP server port. Default is `8080`.
+{%- endif %}
 
 ## Development
 

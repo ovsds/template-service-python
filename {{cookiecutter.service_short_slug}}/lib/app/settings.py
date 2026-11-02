@@ -28,9 +28,21 @@ class LoggingSettings(pydantic_utils.BaseSettingsModel):
     format: str = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
 
 
+{%- if cookiecutter.with_http_server == "true" %}
+
+
+class HttpServerSettings(pydantic_utils.BaseSettingsModel):
+    host: str = "0.0.0.0"
+    port: int = 8080
+{%- endif %}
+
+
 class Settings(pydantic_utils.BaseSettings):
     app: AppSettings = pydantic.Field(default_factory=AppSettings)
     logs: LoggingSettings = pydantic.Field(default_factory=LoggingSettings)
+{%- if cookiecutter.with_http_server == "true" %}
+    http_server: HttpServerSettings = pydantic.Field(default_factory=HttpServerSettings)
+{%- endif %}
 
 
 __all__ = [

@@ -11,11 +11,26 @@ DEFAULT_RESULTS_PATH = ".test_results"
 
 
 @dataclasses.dataclass(frozen=True)
+class Command:
+    command: str
+    stop_on_output: typing.Optional[str] = None
+
+    @classmethod
+    def from_raw(cls, raw_command: typing.Union[str, dict[str, str]]) -> "Command":
+        if isinstance(raw_command, str):
+            return cls(command=raw_command)
+        return cls(
+            command=raw_command["command"],
+            stop_on_output=raw_command.get("stop_on_output"),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
 class Replay:
     name: str
     parameters: dict[str, str]
     additional_files: list[str] = dataclasses.field(default_factory=list)
-    commands: list[str] = dataclasses.field(default_factory=list)
+    commands: list[Command] = dataclasses.field(default_factory=list)
     envs: dict[str, str] = dataclasses.field(default_factory=dict)
 
     @classmethod
@@ -24,7 +39,7 @@ class Replay:
             name=replay_dict["name"],
             parameters=replay_dict["parameters"],
             additional_files=replay_dict.get("additional_files", []),
-            commands=replay_dict.get("commands", []),
+            commands=[Command.from_raw(command) for command in replay_dict.get("commands", [])],
             envs=replay_dict.get("envs", {}),
         )
 
@@ -35,14 +50,14 @@ class Replay:
 @dataclasses.dataclass(frozen=True)
 class ReplaysManifest:
     default_parameters: dict[str, str]
-    commands: list[str]
+    commands: list[Command]
     replays: list[Replay]
 
     @classmethod
     def from_dict(cls, replays_dict: dict[str, typing.Any]) -> "ReplaysManifest":
         return cls(
             default_parameters=replays_dict["default_parameters"],
-            commands=replays_dict["commands"],
+            commands=[Command.from_raw(command) for command in replays_dict["commands"]],
             replays=[Replay.from_dict(replay_dict) for replay_dict in replays_dict["replays"]],
         )
 
@@ -75,7 +90,15 @@ def build_replay(replay: Replay, results_path: str = DEFAULT_RESULTS_PATH):
 
 def run_replay(replay: Replay, cwd: str):
     for command in replay.commands:
-        cli_utils.run_command(command, cwd=cwd, envs=replay.envs)
+        if command.stop_on_output is None:
+            cli_utils.run_command(command.command, cwd=cwd, envs=replay.envs)
+        else:
+            cli_utils.run_command_until_output(
+                command.command,
+                stop_on_output=command.stop_on_output,
+                cwd=cwd,
+                envs=replay.envs,
+            )
 
 
 def copy_additional_files(replay: Replay, additional_files_path: str, results_path: str = DEFAULT_RESULTS_PATH):
@@ -98,6 +121,7 @@ def clean_replay(replay: Replay, results_path: str = DEFAULT_RESULTS_PATH):
 
 
 __all__ = [
+    "Command",
     "Replay",
     "build_replay",
     "clean_replay",

@@ -26,11 +26,15 @@ if __name__ == "__main__":
     if "{{ cookiecutter.with_aiogram_utils }}" != "true":
         remove_folder("lib/utils/aiogram")
 
-    if "{{ cookiecutter.with_aiohttp_utils }}" != "true":
+    if "{{ cookiecutter.with_http_server }}" != "true":
+        remove_file("lib/utils/aiohttp/lifecycle.py")
+        remove_folder("tests/unit/utils/aiohttp")
+
+    if "{{ cookiecutter.__with_aiohttp }}" != "true":
         remove_folder("lib/utils/aiohttp")
 
     # lib/utils/aiohttp/handlers/responses.py imports lib.utils.json
-    if "{{ cookiecutter.with_json_utils }}" != "true" and "{{ cookiecutter.with_aiohttp_utils }}" != "true":
+    if "{{ cookiecutter.__with_json }}" != "true":
         remove_file("lib/utils/json.py")
 
     remove_file("lib/utils/lifecycle_manager.py") # moved to lib/utils/lifecycle.py

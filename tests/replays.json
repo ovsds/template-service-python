@@ -6,8 +6,14 @@
   "commands": [
     "git init",
     "mise run init",
-    "mise run dev-server-start",
-    "mise run dev-server-start-container",
+    {
+      "command": "mise run dev-server-start",
+      "stop_on_output": "HTTP server is listening on"
+    },
+    {
+      "command": "mise run dev-server-start-container",
+      "stop_on_output": "HTTP server is listening on"
+    },
     "mise run lint",
     "mise run lint-fix",
     "mise run test",
@@ -60,6 +66,12 @@
       }
     },
     {
+      "name": "With HTTP server",
+      "parameters": {
+        "with_http_server": "true"
+      }
+    },
+    {
       "name": "All",
       "parameters": {
         "with_trivy": "true",
@@ -68,6 +80,7 @@
         "with_aiogram_utils": "true",
         "python_version": "3.14.8",
         "with_aiohttp_utils": "true",
+        "with_http_server": "true",
         "with_json_utils": "true"
       },
       "envs": {

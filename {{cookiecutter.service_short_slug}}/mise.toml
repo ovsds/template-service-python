@@ -179,7 +179,7 @@ run = [
 description = "Start development application in container"
 run = [
   { task = "image-bake runtime_dev" },
-  { task = "image-run runtime --hostname runtime{% if cookiecutter.with_ngrok == 'true' %} --exposed-port 8080{% endif %}" },
+  { task = "image-run runtime --hostname runtime{% if cookiecutter.with_ngrok == 'true' or cookiecutter.with_http_server == 'true' %} --exposed-port 8080{% endif %}" },
 ]
 {%- if cookiecutter.with_docker == 'true' %}
 
@@ -225,6 +225,7 @@ run = [
     with_docker='{{cookiecutter.with_docker}}' \
     with_aiogram_utils='{{cookiecutter.with_aiogram_utils}}' \
     with_aiohttp_utils='{{cookiecutter.with_aiohttp_utils}}' \
+    with_http_server='{{cookiecutter.with_http_server}}' \
     with_json_utils='{{cookiecutter.with_json_utils}}'
   ''',
 
