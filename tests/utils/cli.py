@@ -60,15 +60,35 @@ def _format_signal_masks(pid: str) -> str:
     return " ".join(f"{name}{value}" for name, value in masks)
 
 
-def _print_stop_diagnostics(session_id: int, env: dict[str, str]) -> None:
-    # which processes ignored the SIGINT, and in which process groups, for a CI run that cannot be reproduced locally
-    print(f"Processes of session {session_id} and dev servers:", flush=True)
+def _ps() -> list[list[str]]:
     ps = subprocess.run(["ps", "-eo", "pid,ppid,pgid,sid,stat,args"], capture_output=True, text=True, check=False)
-    for index, line in enumerate(ps.stdout.splitlines()):
-        fields = line.split(maxsplit=5)
+    return [line.split(maxsplit=5) for line in ps.stdout.splitlines()]
+
+
+def _descendant_groups(pid: int, processes: list[list[str]]) -> dict[int, int]:
+    # by pid, as mise gives each task command a process group of its own
+    children: dict[int, list[tuple[int, int]]] = {}
+    for fields in processes[1:]:
+        children.setdefault(int(fields[1]), []).append((int(fields[0]), int(fields[2])))
+    groups = {pid: pid}
+    pending = [pid]
+    while pending:
+        for child, group in children.get(pending.pop(), []):
+            groups[child] = group
+            pending.append(child)
+    return groups
+
+
+def _print_stop_diagnostics(pid: int, env: dict[str, str]) -> None:
+    # which processes ignored the SIGINT, and in which process groups
+    processes = _ps()
+    tree = _descendant_groups(pid, processes)
+    print(f"Processes of command {pid} and dev servers:", flush=True)
+    for index, fields in enumerate(processes):
+        line = " ".join(fields)
         if index == 0:
             print(f"{line} SIGNAL MASKS", flush=True)
-        elif (len(fields) > 3 and fields[3] == str(session_id)) or "bin.main" in line:
+        elif int(fields[0]) in tree or "bin.main" in line:
             print(f"{line} {_format_signal_masks(fields[0])}", flush=True)
     mise_env = {key: value for key, value in env.items() if key.startswith("MISE_") or key.startswith("__MISE")}
     print(f"mise environment of the command: {sorted(mise_env)}", flush=True)
@@ -84,8 +104,8 @@ def run_command_until_output(
         envs = {}
 
     print(f"Running command {command} until output {stop_on_output!r}...")
-    # the command gets a session of its own, yet under `mise run test` a nested mise inherits this flag, leaves the
-    # group's signals to its parent and never forwards the leader's SIGINT
+    # under `mise run test` a nested mise inherits this flag, leaves the group's signals to its parent and never
+    # forwards the leader's SIGINT
     environ = {key: value for key, value in os.environ.items() if key != "MISE_TASK_PGID_MANAGED"}
     # a CI runner may start the tests with SIGINT blocked, and a child keeps the mask through exec: neither mise nor
     # the dev server would ever get the SIGINT, so the child starts with it unblocked
@@ -97,11 +117,16 @@ def run_command_until_output(
             shlex.split(command),
             cwd=cwd,
             env={**environ, **envs},
+            # mise leaves a task command with a terminal on stdin in its own group, out of reach of its SIGINT
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            start_new_session=True,
+            # a process group, not a session: a mise that leads its session shares its group with its task commands
+            # and passes SIGINT only to their direct child, `sh -c`, which waits for the dev server and never passes
+            # it on; leading a group only, mise gives each task command a group of its own and signals all of it
+            process_group=0,
         )
     finally:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
@@ -109,6 +134,8 @@ def run_command_until_output(
     lines: queue.Queue[str | None] = queue.Queue()
     reader = threading.Thread(target=_read_lines, args=(process.stdout, lines), daemon=True)
     reader.start()
+    # the task commands' groups, recorded while mise lives: they outlive it when it dies or is reaped first
+    groups = {process.pid}
     deadline = time.monotonic() + START_TIMEOUT_SECONDS
     try:
         while True:
@@ -130,7 +157,8 @@ def run_command_until_output(
                 break
 
         print(f"Command({command}) printed {stop_on_output!r}, stopping...", flush=True)
-        # the leader only: mise and docker forward the signal to their child once
+        groups.update(_descendant_groups(process.pid, _ps()).values())
+        # the leader only: mise passes it on to its task commands' groups once, docker to its container
         process.send_signal(signal.SIGINT)
         try:
             exit_code = process.wait(timeout=STOP_TIMEOUT_SECONDS)
@@ -143,8 +171,12 @@ def run_command_until_output(
             print(f"Command({command}) failed to stop with exit_code({exit_code})")
             raise CommandError(exit_code=exit_code, stderr="", command=command)
     finally:
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(process.pid, signal.SIGKILL)
+        if process.poll() is None:
+            groups.update(_descendant_groups(process.pid, _ps()).values())
+        # never the tests' own group, which a task command could join
+        for group in groups - {os.getpgrp()}:
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(group, signal.SIGKILL)
         process.wait()
         reader.join(timeout=STOP_TIMEOUT_SECONDS)
         while not lines.empty():
