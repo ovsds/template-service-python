@@ -7,6 +7,7 @@ import lib.utils.aiohttp as aiohttp_utils
 @dataclasses.dataclass(frozen=True)
 class HttpServerAppFactory(aiohttp_utils.AppFactory):
     settings: app_settings.Settings
+    readiness_service: aiohttp_utils.ReadinessService
 
     def get_routes(self) -> list[aiohttp_utils.Route]:
         return [
@@ -15,6 +16,16 @@ class HttpServerAppFactory(aiohttp_utils.AppFactory):
                 method="GET",
                 path="/health/liveness",
                 handler=aiohttp_utils.LivenessProbeHandler(),
+            ),
+            aiohttp_utils.Route(
+                method="GET",
+                path="/health/readiness",
+                handler=aiohttp_utils.ReadinessProbeHandler(readiness_service=self.readiness_service),
+            ),
+            aiohttp_utils.Route(
+                method="GET",
+                path="/health/startup",
+                handler=aiohttp_utils.StartupProbeHandler(readiness_service=self.readiness_service),
             ),
             aiohttp_utils.Route(
                 method="GET",
