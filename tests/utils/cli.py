@@ -1,10 +1,15 @@
+import contextlib
 import os
+import queue as queue_module
 import signal
 import subprocess
 import threading
+import time
 import typing
 
+START_TIMEOUT_SECONDS = 900
 STOP_TIMEOUT_SECONDS = 30
+STOPPED_EXIT_CODES = (0, 128 + signal.SIGINT, -signal.SIGINT)
 
 
 class CommandError(Exception):
@@ -38,9 +43,10 @@ def run_command(
         ) from exc
 
 
-def _print_lines(lines: typing.Iterable[str]) -> None:
+def _read_lines(lines: typing.Iterable[str], queue: "queue_module.Queue[str | None]") -> None:
     for line in lines:
-        print(line, end="", flush=True)
+        queue.put(line)
+    queue.put(None)
 
 
 def run_command_until_output(
@@ -65,32 +71,48 @@ def run_command_until_output(
         start_new_session=True,
     )
     assert process.stdout is not None
+    lines: queue_module.Queue[str | None] = queue_module.Queue()
+    reader = threading.Thread(target=_read_lines, args=(process.stdout, lines), daemon=True)
+    reader.start()
+    deadline = time.monotonic() + START_TIMEOUT_SECONDS
     try:
-        for line in process.stdout:
+        while True:
+            try:
+                line = lines.get(timeout=max(deadline - time.monotonic(), 0))
+            except queue_module.Empty as exc:
+                print(f"Command({command}) printed no {stop_on_output!r} in {START_TIMEOUT_SECONDS}s")
+                raise CommandError(exit_code=-signal.SIGKILL, stderr="", command=command) from exc
+
+            if line is None:
+                exit_code = process.wait()
+                if exit_code != 0:
+                    print(f"Command({command}) failed with exit_code({exit_code})")
+                    raise CommandError(exit_code=exit_code, stderr="", command=command)
+                return
+
             print(line, end="", flush=True)
             if stop_on_output in line:
                 break
-        else:
-            exit_code = process.wait()
-            if exit_code != 0:
-                print(f"Command({command}) failed with exit_code({exit_code})")
-                raise CommandError(exit_code=exit_code, stderr="", command=command)
-            return
 
         print(f"Command({command}) printed {stop_on_output!r}, stopping...")
-        threading.Thread(target=_print_lines, args=(process.stdout,), daemon=True).start()
-        os.killpg(process.pid, signal.SIGINT)
+        # the leader only: mise and docker forward the signal to their child once
+        process.send_signal(signal.SIGINT)
         try:
-            process.wait(timeout=STOP_TIMEOUT_SECONDS)
+            exit_code = process.wait(timeout=STOP_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired as exc:
             print(f"Command({command}) did not stop in {STOP_TIMEOUT_SECONDS}s, killing...")
-            os.killpg(process.pid, signal.SIGKILL)
-            process.wait()
             raise CommandError(exit_code=-signal.SIGKILL, stderr="", command=command) from exc
+
+        if exit_code not in STOPPED_EXIT_CODES:
+            print(f"Command({command}) failed to stop with exit_code({exit_code})")
+            raise CommandError(exit_code=exit_code, stderr="", command=command)
     finally:
-        if process.poll() is None:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
-            process.wait()
+        process.wait()
+        reader.join(timeout=STOP_TIMEOUT_SECONDS)
+        while not lines.empty():
+            print(lines.get() or "", end="", flush=True)
 
 
 __all__ = [

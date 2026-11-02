@@ -85,6 +85,7 @@ venv = ".venv"
 venvPath = '.'
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 log_cli = true
 log_level = "WARNING"
 pythonpath = "."
