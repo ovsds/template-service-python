@@ -32,12 +32,6 @@
       }
     },
     {
-      "name": "With Ngrok",
-      "parameters": {
-        "with_ngrok": "true"
-      }
-    },
-    {
       "name": "With Docker",
       "parameters": {
         "with_docker": "true"
@@ -74,7 +68,6 @@
       "name": "All",
       "parameters": {
         "with_trivy": "true",
-        "with_ngrok": "true",
         "with_docker": "true",
         "with_aiohttp_utils": "true",
         "with_http_server": "true",

@@ -4,9 +4,6 @@ python = "{{ cookiecutter.python_version }}"
 [env]
 SETTINGS_PATH = "{{ "{{" }}config_root}}/.settings/dev.yaml"
 SETTINGS_TEST_PATH = "{{ "{{" }}config_root}}/.settings/test.yaml"
-{%- if cookiecutter.with_ngrok == 'true' %}
-APP_PORT = "8080"
-{%- endif %}
 {%- if cookiecutter.with_docker == 'true' %}
 _.file = "../docker/.env"
 {%- endif %}
@@ -163,23 +160,12 @@ run = [
   "echo 'Starting server...'",
   ".venv/bin/python -m bin.main",
 ]
-{%- if cookiecutter.with_ngrok == 'true' %}
-
-[tasks.dev-server-tunnel-start]
-description = "Start ngrok tunnel for development application"
-run = [
-  "echo 'Setting up ngrok...'",
-  'ngrok config add-authtoken "$NGROK_AUTH_TOKEN"',
-  "echo 'Starting ngrok tunnel...'",
-  'ngrok http --domain="$NGROK_DOMAIN" "$APP_PORT"',
-]
-{%- endif %}
 
 [tasks.dev-server-start-container]
 description = "Start development application in container"
 run = [
   { task = "image-bake runtime_dev" },
-  { task = "image-run runtime --hostname runtime{% if cookiecutter.with_ngrok == 'true' or cookiecutter.__with_http_server == 'true' %} --exposed-port 8080{% endif %}" },
+  { task = "image-run runtime --hostname runtime{% if cookiecutter.__with_http_server == 'true' %} --exposed-port 8080{% endif %}" },
 ]
 {%- if cookiecutter.with_docker == 'true' %}
 
@@ -221,7 +207,6 @@ run = [
     service_short_slug='{{cookiecutter.service_short_slug}}' \
     python_version='{{cookiecutter.python_version}}' \
     with_trivy='{{cookiecutter.with_trivy}}' \
-    with_ngrok='{{cookiecutter.with_ngrok}}' \
     with_docker='{{cookiecutter.with_docker}}' \
     with_aiohttp_utils='{{cookiecutter.with_aiohttp_utils}}' \
     with_http_server='{{cookiecutter.with_http_server}}' \

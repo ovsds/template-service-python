@@ -24,7 +24,6 @@ Optional, gated by cookiecutter flags answered at generation time:
 
 - `with_docker` — `Dockerfile`, `docker-bake.hcl`, dev/test docker settings YAMLs.
 - `with_trivy` — `trivy.yaml` and the CI scanning hook.
-- `with_ngrok` — mise task to expose the local app via an ngrok tunnel.
 - `with_aiohttp_utils` — `lib/utils/aiohttp/` helpers.
 - `with_http_server` — aiohttp HTTP server with pydantic-typed handlers, a map-based error middleware, liveness, readiness and startup probes (cached checks of required subsystems), an app-info route, an OpenAPI 3.1 spec built from the handlers' schemas with a CDN-loaded Swagger UI, and host/port settings, implies `with_aiohttp_utils`.
 - `with_prometheus` — Prometheus request counter and duration histogram by route template, served at `GET /metrics`, implies `with_http_server`.
