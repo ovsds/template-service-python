@@ -1,4 +1,4 @@
-{% if cookiecutter.with_http_server == "true" -%}
+{% if cookiecutter.__with_http_server == "true" -%}
 from .app_info import *
 from .base import *
 {% endif -%}

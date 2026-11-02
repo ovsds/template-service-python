@@ -2,13 +2,17 @@ import asyncio
 import dataclasses
 import logging
 import typing
+{%- if cookiecutter.with_prometheus == "true" %}
+
+import prometheus_client
+{%- endif %}
 
 import lib.app.errors as app_errors
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
 import lib.app.http_server as app_http_server
 {%- endif %}
 import lib.app.settings as app_settings
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
 import lib.utils.aiohttp as aiohttp_utils
 {%- endif %}
 import lib.utils.lifecycle as lifecycle_utils
@@ -50,11 +54,18 @@ class Application:
         # Repositories
 
         # Services
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
 
         # HTTP server
 
         logger.info("Initializing HTTP server")
+{%- if cookiecutter.with_prometheus == "true" %}
+        # A registry per application, so building it twice in one process registers no metric twice
+        metrics_registry = prometheus_client.CollectorRegistry()
+        prometheus_client.ProcessCollector(registry=metrics_registry)
+        prometheus_client.PlatformCollector(registry=metrics_registry)
+        prometheus_client.GCCollector(registry=metrics_registry)
+{%- endif %}
         readiness_service = aiohttp_utils.ReadinessService(
             subsystems=[
                 # Services register their subsystems here
@@ -63,6 +74,9 @@ class Application:
         http_server_app = app_http_server.HttpServerAppFactory(
             settings=settings,
             readiness_service=readiness_service,
+{%- if cookiecutter.with_prometheus == "true" %}
+            request_metrics=aiohttp_utils.RequestMetrics(registry=metrics_registry),
+{%- endif %}
         ).create()
         http_server_lifecycle = aiohttp_utils.Lifecycle(
             logger=logger,
