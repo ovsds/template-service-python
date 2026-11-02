@@ -59,6 +59,13 @@ class Application:
         # HTTP server
 
         logger.info("Initializing HTTP server")
+{%- if cookiecutter.with_prometheus == "true" %}
+        # A registry per application, so building it twice in one process registers no metric twice
+        metrics_registry = prometheus_client.CollectorRegistry()
+        prometheus_client.ProcessCollector(registry=metrics_registry)
+        prometheus_client.PlatformCollector(registry=metrics_registry)
+        prometheus_client.GCCollector(registry=metrics_registry)
+{%- endif %}
         readiness_service = aiohttp_utils.ReadinessService(
             subsystems=[
                 # Services register their subsystems here
@@ -68,7 +75,7 @@ class Application:
             settings=settings,
             readiness_service=readiness_service,
 {%- if cookiecutter.with_prometheus == "true" %}
-            request_metrics=aiohttp_utils.RequestMetrics(registry=prometheus_client.REGISTRY),
+            request_metrics=aiohttp_utils.RequestMetrics(registry=metrics_registry),
 {%- endif %}
         ).create()
         http_server_lifecycle = aiohttp_utils.Lifecycle(

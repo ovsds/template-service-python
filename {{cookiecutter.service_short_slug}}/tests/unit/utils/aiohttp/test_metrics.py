@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 
 import aiohttp.test_utils as aiohttp_test_utils
@@ -7,6 +8,7 @@ import prometheus_client
 import pytest
 
 import lib.utils.aiohttp as aiohttp_utils
+import lib.utils.aiohttp.metrics as aiohttp_metrics
 
 Client = aiohttp_test_utils.TestClient[aiohttp_web.Request, aiohttp_web.Application]
 
@@ -30,14 +32,26 @@ class FailingHandler:
 
 
 @dataclasses.dataclass(frozen=True)
+class SlowHandler:
+    started: asyncio.Event
+
+    async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
+        self.started.set()
+        await asyncio.Event().wait()
+        raise AssertionError("Unreachable")
+
+
+@dataclasses.dataclass(frozen=True)
 class MetricsAppFactory(aiohttp_utils.AppFactory):
     request_metrics: aiohttp_utils.RequestMetrics
+    slow_started: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
 
     def get_routes(self) -> list[aiohttp_utils.Route]:
         return [
             aiohttp_utils.Route(method="GET", path="/items/{item_id}", handler=ItemHandler()),
             aiohttp_utils.Route(method="GET", path="/redirect", handler=RedirectHandler()),
             aiohttp_utils.Route(method="GET", path="/failure", handler=FailingHandler()),
+            aiohttp_utils.Route(method="GET", path="/slow", handler=SlowHandler(started=self.slow_started)),
             aiohttp_utils.Route(
                 method="GET",
                 path="/metrics",
@@ -50,8 +64,14 @@ class MetricsAppFactory(aiohttp_utils.AppFactory):
         return [request_metrics_middleware.process, *super().get_middlewares()]
 
 
-def create_client(registry: prometheus_client.CollectorRegistry) -> Client:
-    app = MetricsAppFactory(request_metrics=aiohttp_utils.RequestMetrics(registry=registry)).create()
+def create_client(
+    registry: prometheus_client.CollectorRegistry,
+    slow_started: asyncio.Event | None = None,
+) -> Client:
+    app = MetricsAppFactory(
+        request_metrics=aiohttp_utils.RequestMetrics(registry=registry),
+        slow_started=slow_started or asyncio.Event(),
+    ).create()
     return aiohttp_test_utils.TestClient(aiohttp_test_utils.TestServer(app))
 
 
@@ -85,7 +105,39 @@ async def test_counts_unmatched_route():
 
         assert response.status == 404
 
-    assert get_requests_total(registry, route="unmatched", status="404") == 1
+    assert get_requests_total(registry, route=aiohttp_metrics.UNMATCHED_ROUTE, status="404") == 1
+
+
+@pytest.mark.asyncio
+async def test_counts_method_not_allowed_as_unmatched():
+    registry = prometheus_client.CollectorRegistry()
+    async with create_client(registry) as client:
+        response = await client.post("/metrics")
+
+        assert response.status == 405
+
+    labels = {"method": "POST", "route": aiohttp_metrics.UNMATCHED_ROUTE, "status": "405"}
+    assert registry.get_sample_value("http_requests_total", labels=labels) == 1
+
+
+@pytest.mark.asyncio
+async def test_counts_client_closed_request():
+    registry = prometheus_client.CollectorRegistry()
+    slow_started = asyncio.Event()
+    status = str(aiohttp_metrics.CLIENT_CLOSED_REQUEST_STATUS)
+    async with create_client(registry, slow_started=slow_started) as client:
+        request = asyncio.create_task(client.get("/slow"))
+        await slow_started.wait()
+        request.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await request
+
+        for _ in range(100):
+            if get_requests_total(registry, route="/slow", status=status) is not None:
+                break
+            await asyncio.sleep(0.01)
+
+    assert get_requests_total(registry, route="/slow", status=status) == 1
 
 
 @pytest.mark.asyncio

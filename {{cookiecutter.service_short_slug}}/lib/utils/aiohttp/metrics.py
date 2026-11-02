@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import http
 import time
@@ -6,7 +7,10 @@ import aiohttp.typedefs as aiohttp_typedefs
 import aiohttp.web as aiohttp_web
 import prometheus_client
 
+# Not found and method not allowed requests match no route
 UNMATCHED_ROUTE = "unmatched"
+# The client closed the connection before the response, as nginx reports it
+CLIENT_CLOSED_REQUEST_STATUS = 499
 
 
 @dataclasses.dataclass(frozen=True)
@@ -57,6 +61,9 @@ class RequestMetricsMiddleware:
             return response
         except aiohttp_web.HTTPException as exc:
             status = exc.status
+            raise
+        except asyncio.CancelledError:
+            status = CLIENT_CLOSED_REQUEST_STATUS
             raise
         finally:
             # Route templates, not raw paths, keep label cardinality bounded

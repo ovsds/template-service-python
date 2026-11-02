@@ -25,9 +25,9 @@
 {%- endif %}
 {%- if cookiecutter.with_prometheus == 'true' %}
 
-#### Metrics
+### Metrics
 
-Prometheus metrics are served at `GET /metrics`: `http_requests_total` by method, route template and status, and `http_request_duration_seconds` by method and route template.
+Prometheus metrics are served at `GET /metrics`: `http_requests_total` by method, route template and status, and `http_request_duration_seconds` by method and route template. Requests matching no route, method not allowed included, share the `unmatched` route.
 {%- endif %}
 
 ## Development
