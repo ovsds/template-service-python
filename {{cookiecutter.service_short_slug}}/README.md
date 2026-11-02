@@ -8,6 +8,9 @@
 
 - `APP__ENV` - application environment, can be one of `development`, `testing`, `staging`, `production`. Default is `production`.
 - `APP__DEBUG` - application debug mode, can be `true` or `false`. Default is `false`.
+{%- if cookiecutter.with_http_server == 'true' %}
+- `APP__NAME` - application name, returned by `GET /api/v1/info`. Default is `{{ cookiecutter.service_slug }}`.
+{%- endif %}
 
 #### Logging
 

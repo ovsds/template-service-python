@@ -26,7 +26,7 @@ Optional, gated by cookiecutter flags answered at generation time:
 - `with_trivy` — `trivy.yaml` and the CI scanning hook.
 - `with_ngrok` — mise task to expose the local app via an ngrok tunnel.
 - `with_aiohttp_utils` — `lib/utils/aiohttp/` helpers.
-- `with_http_server` — aiohttp HTTP server with a liveness route and host/port settings, implies `with_aiohttp_utils`.
+- `with_http_server` — aiohttp HTTP server with pydantic-typed handlers, a map-based error middleware, liveness and app-info routes and host/port settings, implies `with_aiohttp_utils`.
 - `with_aiogram_utils` — `lib/utils/aiogram/` helpers (Telegram bot).
 - `with_json_utils` — `lib/utils/json.py` (orjson wrapper), also included by `with_aiohttp_utils`.
 

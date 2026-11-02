@@ -2,12 +2,11 @@ import asyncio
 import dataclasses
 import logging
 import typing
-{%- if cookiecutter.with_http_server == "true" %}
-
-import aiohttp.web as aiohttp_web
-{%- endif %}
 
 import lib.app.errors as app_errors
+{%- if cookiecutter.with_http_server == "true" %}
+import lib.app.http_server as app_http_server
+{%- endif %}
 import lib.app.settings as app_settings
 {%- if cookiecutter.with_http_server == "true" %}
 import lib.utils.aiohttp as aiohttp_utils
@@ -56,8 +55,7 @@ class Application:
         # HTTP server
 
         logger.info("Initializing HTTP server")
-        http_server_app = aiohttp_web.Application()
-        http_server_app.router.add_get("/health/liveness", aiohttp_utils.LivenessProbeHandler().process)
+        http_server_app = app_http_server.HttpServerAppFactory(settings=settings).create()
         http_server_lifecycle = aiohttp_utils.Lifecycle(
             logger=logger,
             app=http_server_app,

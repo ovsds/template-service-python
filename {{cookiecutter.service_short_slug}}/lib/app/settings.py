@@ -7,6 +7,9 @@ import lib.utils.pydantic as pydantic_utils
 
 
 class AppSettings(pydantic_utils.BaseSettingsModel):
+{%- if cookiecutter.with_http_server == "true" %}
+    name: str = "{{ cookiecutter.service_slug }}"
+{%- endif %}
     env: str = "production"
     debug: bool = False
     version: str = "unknown"
