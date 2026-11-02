@@ -1,4 +1,3 @@
-import asyncio
 import dataclasses
 import http
 import time
@@ -7,10 +6,7 @@ import aiohttp.typedefs as aiohttp_typedefs
 import aiohttp.web as aiohttp_web
 import prometheus_client
 
-# Not found and method not allowed requests match no route
 UNMATCHED_ROUTE = "unmatched"
-# The client closed the connection before the response, as nginx reports it
-CLIENT_CLOSED_REQUEST_STATUS = 499
 
 
 @dataclasses.dataclass(frozen=True)
@@ -54,24 +50,25 @@ class RequestMetricsMiddleware:
         handler: aiohttp_typedefs.Handler,
     ) -> aiohttp_web.StreamResponse:
         started_at = time.perf_counter()
-        status: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
         try:
             response = await handler(request)
-            status = response.status
-            return response
         except aiohttp_web.HTTPException as exc:
-            status = exc.status
+            self._observe(request, status=exc.status, started_at=started_at)
             raise
-        except asyncio.CancelledError:
-            status = CLIENT_CLOSED_REQUEST_STATUS
+        except Exception:
+            self._observe(request, status=http.HTTPStatus.INTERNAL_SERVER_ERROR, started_at=started_at)
             raise
-        finally:
-            # Route templates, not raw paths, keep label cardinality bounded
-            route = self._get_route(request)
-            self.metrics.requests_total.labels(method=request.method, route=route, status=str(status)).inc()
-            self.metrics.request_duration_seconds.labels(method=request.method, route=route).observe(
-                time.perf_counter() - started_at
-            )
+        # A cancelled handler, at server shutdown, sent no response and is not counted
+        self._observe(request, status=response.status, started_at=started_at)
+        return response
+
+    def _observe(self, request: aiohttp_web.Request, status: int, started_at: float) -> None:
+        # Route templates, not raw paths, keep label cardinality bounded
+        route = self._get_route(request)
+        self.metrics.requests_total.labels(method=request.method, route=route, status=str(status)).inc()
+        self.metrics.request_duration_seconds.labels(method=request.method, route=route).observe(
+            time.perf_counter() - started_at
+        )
 
     def _get_route(self, request: aiohttp_web.Request) -> str:
         resource = request.match_info.route.resource

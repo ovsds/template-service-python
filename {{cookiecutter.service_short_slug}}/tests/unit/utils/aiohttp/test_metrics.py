@@ -8,7 +8,6 @@ import prometheus_client
 import pytest
 
 import lib.utils.aiohttp as aiohttp_utils
-import lib.utils.aiohttp.metrics as aiohttp_metrics
 
 Client = aiohttp_test_utils.TestClient[aiohttp_web.Request, aiohttp_web.Application]
 
@@ -105,7 +104,7 @@ async def test_counts_unmatched_route():
 
         assert response.status == 404
 
-    assert get_requests_total(registry, route=aiohttp_metrics.UNMATCHED_ROUTE, status="404") == 1
+    assert get_requests_total(registry, route="unmatched", status="404") == 1
 
 
 @pytest.mark.asyncio
@@ -116,15 +115,14 @@ async def test_counts_method_not_allowed_as_unmatched():
 
         assert response.status == 405
 
-    labels = {"method": "POST", "route": aiohttp_metrics.UNMATCHED_ROUTE, "status": "405"}
+    labels = {"method": "POST", "route": "unmatched", "status": "405"}
     assert registry.get_sample_value("http_requests_total", labels=labels) == 1
 
 
 @pytest.mark.asyncio
-async def test_counts_client_closed_request():
+async def test_skips_cancelled_request():
     registry = prometheus_client.CollectorRegistry()
     slow_started = asyncio.Event()
-    status = str(aiohttp_metrics.CLIENT_CLOSED_REQUEST_STATUS)
     async with create_client(registry, slow_started=slow_started) as client:
         request = asyncio.create_task(client.get("/slow"))
         await slow_started.wait()
@@ -132,12 +130,11 @@ async def test_counts_client_closed_request():
         with pytest.raises(asyncio.CancelledError):
             await request
 
-        for _ in range(100):
-            if get_requests_total(registry, route="/slow", status=status) is not None:
-                break
-            await asyncio.sleep(0.01)
-
-    assert get_requests_total(registry, route="/slow", status=status) == 1
+    # aiohttp's test server cancels the handler on the client's disconnect, a shutdown cancels it the same way
+    slow_samples = [
+        sample for metric in registry.collect() for sample in metric.samples if sample.labels.get("route") == "/slow"
+    ]
+    assert slow_samples == []
 
 
 @pytest.mark.asyncio
