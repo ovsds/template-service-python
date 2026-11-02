@@ -8,8 +8,11 @@
   "with_docker": "false",
   "with_aiogram_utils": "false",
   "with_aiohttp_utils": "false",
+  "with_http_server": "false",
   "with_json_utils": "false",
   "__python_minor": "{{ cookiecutter.python_version.split('.')[:2] | join('.') }}",
   "__python_next_minor": "{{ cookiecutter.python_version.split('.')[0] }}.{{ cookiecutter.python_version.split('.')[1] | int + 1 }}",
+  "__with_aiohttp": "{{ 'true' if cookiecutter.with_aiohttp_utils == 'true' or cookiecutter.with_http_server == 'true' else 'false' }}",
+  "__with_json": "{{ 'true' if cookiecutter.with_json_utils == 'true' or cookiecutter.__with_aiohttp == 'true' else 'false' }}",
   "_empty_guard": ""
 }

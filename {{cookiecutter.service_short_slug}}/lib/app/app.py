@@ -2,9 +2,16 @@ import asyncio
 import dataclasses
 import logging
 import typing
+{%- if cookiecutter.with_http_server == "true" %}
+
+import aiohttp.web as aiohttp_web
+{%- endif %}
 
 import lib.app.errors as app_errors
 import lib.app.settings as app_settings
+{%- if cookiecutter.with_http_server == "true" %}
+import lib.utils.aiohttp as aiohttp_utils
+{%- endif %}
 import lib.utils.lifecycle as lifecycle_utils
 import lib.utils.logging as logging_utils
 
@@ -44,6 +51,23 @@ class Application:
         # Repositories
 
         # Services
+{%- if cookiecutter.with_http_server == "true" %}
+
+        # HTTP server
+
+        logger.info("Initializing HTTP server")
+        http_server_app = aiohttp_web.Application()
+        http_server_app.router.add_get("/health/liveness", aiohttp_utils.LivenessProbeHandler().process)
+        http_server_lifecycle = aiohttp_utils.Lifecycle(
+            logger=logger,
+            app=http_server_app,
+            host=settings.http_server.host,
+            port=settings.http_server.port,
+        )
+        lifecycle_main_tasks.append(http_server_lifecycle.get_main_task())
+        lifecycle_startup_callbacks.extend(http_server_lifecycle.get_startup_callbacks())
+        lifecycle_shutdown_callbacks.extend(http_server_lifecycle.get_shutdown_callbacks())
+{%- endif %}
 
         logger.info("Initializing lifecycle manager")
 
