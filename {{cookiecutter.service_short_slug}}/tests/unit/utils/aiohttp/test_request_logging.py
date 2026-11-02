@@ -71,6 +71,17 @@ async def test_request_is_logged_once(request_logs: pytest.LogCaptureFixture):
 
 
 @pytest.mark.asyncio
+async def test_request_path_is_logged_encoded(request_logs: pytest.LogCaptureFixture):
+    request_logs.set_level(logging.INFO)
+    async with create_client() as client:
+        await client.get("/ok%0Aforged")
+
+        records = get_request_log_records(request_logs)
+        assert len(records) == 1
+        assert "path=/ok%0Aforged status=404" in records[0].getMessage()
+
+
+@pytest.mark.asyncio
 async def test_failed_request_is_logged_with_error_response_status(request_logs: pytest.LogCaptureFixture):
     request_logs.set_level(logging.INFO)
     async with create_client() as client:

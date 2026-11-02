@@ -30,7 +30,7 @@ class RequestLoggingMiddleware:
             status = exc.status
             raise
         except asyncio.CancelledError:
-            # The client has disconnected before the response, no status was sent
+            # The handler was cancelled (server shutdown or a forced cancel), no status was sent
             status = "cancelled"
             raise
         finally:
@@ -38,7 +38,8 @@ class RequestLoggingMiddleware:
             logger.info(
                 "Request has been processed: method=%s path=%s status=%s duration_ms=%.3f",
                 request.method,
-                request.path,
+                # raw_path stays percent-encoded, so a decoded newline cannot forge a log line
+                request.rel_url.raw_path,
                 status,
                 duration_ms,
             )
