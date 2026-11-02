@@ -3,6 +3,7 @@ import http
 import logging
 import typing
 
+import aiohttp.hdrs as aiohttp_hdrs
 import aiohttp.typedefs as aiohttp_typedefs
 import aiohttp.web as aiohttp_web
 
@@ -57,12 +58,30 @@ class ErrorHandlingMiddleware:
         except Exception as exc:
             schema = self._find_schema(exc)
             if schema is not None:
-                return schema.as_error_response()
+                return self._build_response(exc, schema)
             # Unmapped aiohttp HTTP exceptions (redirects and the like) are valid responses, aiohttp renders them
             if isinstance(exc, aiohttp_web.HTTPException):
                 raise
             logger.exception("Unhandled request error")
             return InternalServerErrorResponseSchema().as_error_response()
+
+    def _build_response(
+        self,
+        exc: Exception,
+        schema: handlers_base.ErrorResponseSchema,
+    ) -> aiohttp_web.StreamResponse:
+        if not isinstance(exc, aiohttp_web.HTTPException):
+            return schema.as_error_response()
+
+        # aiohttp fills the text with "<status>: <reason>" unless the raiser passed its own message
+        if exc.text is not None and exc.text != f"{exc.status}: {exc.reason}":
+            schema = schema.model_copy(update={"message": exc.text})
+        headers = {
+            key: value
+            for key, value in exc.headers.items()
+            if key not in (aiohttp_hdrs.CONTENT_TYPE, aiohttp_hdrs.CONTENT_LENGTH)
+        }
+        return schema.as_error_response(headers=headers)
 
     def _find_schema(self, exc: Exception) -> handlers_base.ErrorResponseSchema | None:
         for exc_class in type(exc).__mro__:

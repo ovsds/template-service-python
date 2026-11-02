@@ -3,6 +3,7 @@ import typing
 
 import aiohttp.test_utils as aiohttp_test_utils
 import aiohttp.web as aiohttp_web
+import pydantic
 import pytest
 
 import lib.utils.aiohttp as aiohttp_utils
@@ -42,6 +43,35 @@ class EchoHandler(aiohttp_utils.BaseHandler):
         return response_schema.as_response(status=201)
 
 
+class ItemRequestPathSchema(pydantic_utils.BaseModel):
+    item_id: int
+
+
+class ItemRequestQuerySchema(pydantic_utils.BaseModel):
+    tag: list[str] = pydantic.Field(default_factory=list)
+    sort: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class ItemHandler(aiohttp_utils.BaseHandler):
+    class RequestSchema(aiohttp_utils.BaseRequestSchema):
+        path: ItemRequestPathSchema
+        query: ItemRequestQuerySchema
+
+    class ResponseSchema(aiohttp_utils.BaseResponseSchema):
+        item_id: int
+        tag: list[str]
+        sort: str | None
+
+    async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
+        request_schema = await self.RequestSchema.from_request(request)
+        return self.ResponseSchema(
+            item_id=request_schema.path.item_id,
+            tag=request_schema.query.tag,
+            sort=request_schema.query.sort,
+        ).as_response()
+
+
 @dataclasses.dataclass(frozen=True)
 class RaisingHandler(aiohttp_utils.BaseHandler):
     exception: Exception
@@ -55,7 +85,13 @@ class ExampleAppFactory(aiohttp_utils.AppFactory):
     def get_routes(self) -> list[aiohttp_utils.Route]:
         return [
             aiohttp_utils.Route(method="POST", path="/echo", handler=EchoHandler()),
+            aiohttp_utils.Route(method="POST", path="/items/{item_id}", handler=ItemHandler()),
             aiohttp_utils.Route(method="GET", path="/item", handler=RaisingHandler(exception=ItemNotFoundError())),
+            aiohttp_utils.Route(
+                method="GET",
+                path="/missing",
+                handler=RaisingHandler(exception=aiohttp_web.HTTPNotFound(text="Item 1 does not exist")),
+            ),
             aiohttp_utils.Route(method="GET", path="/error", handler=RaisingHandler(exception=RuntimeError("boom"))),
             aiohttp_utils.Route(
                 method="GET",
@@ -107,6 +143,42 @@ async def test_handler_responds_bad_request_on_malformed_json():
 
 
 @pytest.mark.asyncio
+async def test_handler_parses_path_and_repeated_query_parameters():
+    async with create_client() as client:
+        response = await client.post("/items/42", params=[("tag", "a"), ("tag", "b"), ("sort", "name")])
+
+        assert response.status == 200
+        assert await response.json() == {"item_id": 42, "tag": ["a", "b"], "sort": "name"}
+
+
+@pytest.mark.asyncio
+async def test_handler_parses_single_value_of_list_query_parameter():
+    async with create_client() as client:
+        response = await client.post("/items/42", params={"tag": "a"})
+
+        assert response.status == 200
+        assert await response.json() == {"item_id": 42, "tag": ["a"], "sort": None}
+
+
+@pytest.mark.asyncio
+async def test_handler_ignores_body_when_schema_has_no_body():
+    async with create_client() as client:
+        response = await client.post("/items/42", data=b"not json")
+
+        assert response.status == 200
+        assert await response.json() == {"item_id": 42, "tag": [], "sort": None}
+
+
+@pytest.mark.asyncio
+async def test_handler_responds_bad_request_on_invalid_path():
+    async with create_client() as client:
+        response = await client.post("/items/abc")
+
+        assert response.status == 400
+        assert await response.json() == {"code": "BAD_REQUEST", "message": "Bad request"}
+
+
+@pytest.mark.asyncio
 async def test_error_middleware_maps_exception():
     async with create_client() as client:
         response = await client.get("/item")
@@ -130,7 +202,17 @@ async def test_error_middleware_maps_wrong_method():
         response = await client.get("/echo")
 
         assert response.status == 405
+        assert response.headers["Allow"] == "POST"
         assert await response.json() == {"code": "METHOD_NOT_ALLOWED", "message": "Method not allowed"}
+
+
+@pytest.mark.asyncio
+async def test_error_middleware_keeps_http_exception_message():
+    async with create_client() as client:
+        response = await client.get("/missing")
+
+        assert response.status == 404
+        assert await response.json() == {"code": "NOT_FOUND", "message": "Item 1 does not exist"}
 
 
 @pytest.mark.asyncio
