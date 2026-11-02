@@ -9,3 +9,7 @@ from .lifecycle import *
 {%- if cookiecutter.with_prometheus == "true" %}
 from .metrics import *
 {%- endif %}
+{%- if cookiecutter.__with_http_server == "true" %}
+from .request_context import *
+from .request_logging import *
+{%- endif %}

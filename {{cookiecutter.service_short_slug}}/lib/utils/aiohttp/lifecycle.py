@@ -17,7 +17,9 @@ class Lifecycle:
     runner: aiohttp_web.AppRunner = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "runner", aiohttp_web.AppRunner(self.app))
+        # Requests are logged by RequestLoggingMiddleware, aiohttp access log would duplicate them
+        # Requests aiohttp rejects before middlewares (malformed HTTP) are not logged
+        object.__setattr__(self, "runner", aiohttp_web.AppRunner(self.app, access_log=None))
 
     async def start_server(self) -> None:
         await self.runner.setup()
