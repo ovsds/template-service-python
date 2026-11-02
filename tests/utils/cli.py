@@ -50,6 +50,18 @@ def _read_lines(lines: typing.Iterable[str], output: "queue.Queue[str | None]") 
     output.put(None)
 
 
+def _print_stop_diagnostics(session_id: int, env: dict[str, str]) -> None:
+    # which processes ignored the SIGINT, and in which process groups, for a CI run that cannot be reproduced locally
+    print(f"Processes of session {session_id} and dev servers:", flush=True)
+    ps = subprocess.run(["ps", "-eo", "pid,ppid,pgid,sid,stat,args"], capture_output=True, text=True, check=False)
+    for index, line in enumerate(ps.stdout.splitlines()):
+        fields = line.split(maxsplit=5)
+        if index == 0 or (len(fields) > 3 and fields[3] == str(session_id)) or "bin.main" in line:
+            print(line, flush=True)
+    mise_env = {key: value for key, value in env.items() if key.startswith("MISE_") or key.startswith("__MISE")}
+    print(f"mise environment of the command: {sorted(mise_env)}", flush=True)
+
+
 def run_command_until_output(
     command: str,
     stop_on_output: str,
@@ -63,7 +75,7 @@ def run_command_until_output(
     # the command gets a session of its own, yet under `mise run test` a nested mise inherits this flag, leaves the
     # group's signals to its parent and never forwards the leader's SIGINT
     environ = {key: value for key, value in os.environ.items() if key != "MISE_TASK_PGID_MANAGED"}
-    # no shell in between: a /bin/sh that does not exec its command (dash) keeps the leader's SIGINT to itself
+    # no shell in between: the leader that gets SIGINT is the command itself, whatever /bin/sh does
     process = subprocess.Popen(
         shlex.split(command),
         cwd=cwd,
@@ -98,13 +110,14 @@ def run_command_until_output(
             if stop_on_output in line:
                 break
 
-        print(f"Command({command}) printed {stop_on_output!r}, stopping...")
+        print(f"Command({command}) printed {stop_on_output!r}, stopping...", flush=True)
         # the leader only: mise and docker forward the signal to their child once
         process.send_signal(signal.SIGINT)
         try:
             exit_code = process.wait(timeout=STOP_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired as exc:
-            print(f"Command({command}) did not stop in {STOP_TIMEOUT_SECONDS}s, killing...")
+            print(f"Command({command}) did not stop in {STOP_TIMEOUT_SECONDS}s, killing...", flush=True)
+            _print_stop_diagnostics(process.pid, {**environ, **envs})
             raise CommandError(exit_code=-signal.SIGKILL, stderr="", command=command) from exc
 
         if exit_code not in STOPPED_EXIT_CODES:
