@@ -66,20 +66,15 @@ class _Operation:
         if not (isinstance(request_schema, type) and issubclass(request_schema, handlers_base.BaseRequestSchema)):
             return cls(route=route, response_model=response_model)
 
-        body_field = request_schema.model_fields.get("body")
-        body_model = cls._get_field_model(request_schema, "body")
+        body_model = cls._get_field_model(request_schema, "body", unwrap_optional=True)
         return cls(
             route=route,
             path_model=cls._get_field_model(request_schema, "path"),
             query_model=cls._get_field_model(request_schema, "query"),
             body_model=body_model,
-            # A request without a body validates "{}", which needs no body when every body field has a default
-            body_required=(
-                body_field is not None
-                and body_field.is_required()
-                and body_model is not None
-                and any(field.is_required() for field in body_model.model_fields.values())
-            ),
+            # A request without a body validates "{}" as its body
+            body_required=body_model is not None
+            and any(field.is_required() for field in body_model.model_fields.values()),
             response_model=response_model,
             has_request_schema=True,
         )
@@ -88,15 +83,16 @@ class _Operation:
     def _get_field_model(
         request_schema: type[handlers_base.BaseRequestSchema],
         field_name: str,
+        unwrap_optional: bool = False,
     ) -> type[pydantic.BaseModel] | None:
         field = request_schema.model_fields.get(field_name)
         if field is None:
             return None
-        # pydantic strips Annotated from field annotations; "Model | None" is unwrapped to Model
-        candidates = [arg for arg in typing.get_args(field.annotation) if arg is not types.NoneType]
-        if len(candidates) != 1:
-            candidates = [field.annotation]
-        model = candidates[0]
+        model = field.annotation
+        if unwrap_optional and typing.get_origin(model) in (typing.Union, types.UnionType):
+            candidates = [arg for arg in typing.get_args(model) if arg is not types.NoneType]
+            if len(candidates) == 1:
+                model = candidates[0]
         if isinstance(model, type) and issubclass(model, pydantic.BaseModel):
             return model
         # The spec leaves the field out rather than fail the app that serves it

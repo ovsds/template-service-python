@@ -154,20 +154,39 @@ def test_spec_skips_excluded_and_wildcard_routes():
     assert spec["paths"] == {}
 
 
-def test_spec_skips_request_field_that_is_not_a_model():
+def test_spec_skips_request_field_that_is_not_a_model(caplog: pytest.LogCaptureFixture):
     spec = build_spec([aiohttp_utils.Route(method="GET", path="/invalid", handler=InvalidRequestHandler())])
 
     assert "parameters" not in spec["paths"]["/invalid"]["get"]
+    assert "OpenAPI skips InvalidRequestSchema.query" in caplog.text
 
 
-class OptionalBodyRequestBodySchema(pydantic_utils.BaseModel):
+class ListBodyRequestSchema(aiohttp_utils.BaseRequestSchema):
+    body: list[CreateItemRequestBodySchema]
+
+
+@dataclasses.dataclass(frozen=True)
+class ListBodyHandler(aiohttp_utils.BaseHandler):
+    RequestSchema = ListBodyRequestSchema
+
+    async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
+        raise NotImplementedError
+
+
+def test_spec_skips_list_body():
+    spec = build_spec([aiohttp_utils.Route(method="POST", path="/items", handler=ListBodyHandler())])
+
+    assert "requestBody" not in spec["paths"]["/items"]["post"]
+
+
+class DefaultsBodySchema(pydantic_utils.BaseModel):
     note: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class OptionalBodyHandler(aiohttp_utils.BaseHandler):
     class RequestSchema(aiohttp_utils.BaseRequestSchema):
-        body: OptionalBodyRequestBodySchema | None = None
+        body: DefaultsBodySchema | None = None
 
     async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
         raise NotImplementedError
@@ -176,7 +195,7 @@ class OptionalBodyHandler(aiohttp_utils.BaseHandler):
 @dataclasses.dataclass(frozen=True)
 class DefaultsBodyHandler(aiohttp_utils.BaseHandler):
     class RequestSchema(aiohttp_utils.BaseRequestSchema):
-        body: OptionalBodyRequestBodySchema
+        body: DefaultsBodySchema
 
     async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
         raise NotImplementedError
@@ -189,6 +208,22 @@ def test_spec_documents_body_that_may_be_left_out(handler: aiohttp_utils.BaseHan
     request_body = spec["paths"]["/notes"]["post"]["requestBody"]
     assert request_body["required"] is False
     assert set(resolve(spec, request_body["content"]["application/json"]["schema"])["properties"]) == {"note"}
+
+
+@dataclasses.dataclass(frozen=True)
+class OptionalRequiredBodyHandler(aiohttp_utils.BaseHandler):
+    class RequestSchema(aiohttp_utils.BaseRequestSchema):
+        body: CreateItemRequestBodySchema | None = None
+
+    async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
+        raise NotImplementedError
+
+
+def test_spec_requires_optional_body_with_required_fields():
+    spec = build_spec([aiohttp_utils.Route(method="POST", path="/items", handler=OptionalRequiredBodyHandler())])
+
+    # A missing body is validated as "{}", which fails on the required fields
+    assert spec["paths"]["/items"]["post"]["requestBody"]["required"] is True
 
 
 def test_spec_declares_path_variables_without_path_model():
