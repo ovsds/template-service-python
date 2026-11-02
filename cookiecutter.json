@@ -4,7 +4,6 @@
   "service_short_slug": "{{ cookiecutter.service_slug }}",
   "python_version": "3.15.0",
   "with_trivy": "false",
-  "with_ngrok": "false",
   "with_docker": "false",
   "with_aiohttp_utils": "false",
   "with_http_server": "false",
