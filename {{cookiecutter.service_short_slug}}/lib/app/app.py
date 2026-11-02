@@ -2,13 +2,17 @@ import asyncio
 import dataclasses
 import logging
 import typing
+{%- if cookiecutter.with_prometheus == "true" %}
+
+import prometheus_client
+{%- endif %}
 
 import lib.app.errors as app_errors
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
 import lib.app.http_server as app_http_server
 {%- endif %}
 import lib.app.settings as app_settings
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
 import lib.utils.aiohttp as aiohttp_utils
 {%- endif %}
 import lib.utils.lifecycle as lifecycle_utils
@@ -50,7 +54,7 @@ class Application:
         # Repositories
 
         # Services
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
 
         # HTTP server
 
@@ -63,6 +67,9 @@ class Application:
         http_server_app = app_http_server.HttpServerAppFactory(
             settings=settings,
             readiness_service=readiness_service,
+{%- if cookiecutter.with_prometheus == "true" %}
+            request_metrics=aiohttp_utils.RequestMetrics(registry=prometheus_client.REGISTRY),
+{%- endif %}
         ).create()
         http_server_lifecycle = aiohttp_utils.Lifecycle(
             logger=logger,
