@@ -1,12 +1,16 @@
 import contextvars
 import dataclasses
 import logging
+import re
 import uuid
 
 import aiohttp.typedefs as aiohttp_typedefs
 import aiohttp.web as aiohttp_web
 
 REQUEST_ID_HEADER = "X-Request-ID"
+# Incoming IDs end up in logs and response headers, anything else is replaced to avoid log forging
+_REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,128}")
+_REQUEST_ID_KEY = aiohttp_web.RequestKey("request_id", str)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -24,6 +28,13 @@ def get_request_context() -> RequestContext | None:
     return _request_context_var.get()
 
 
+def _get_request_id(request: aiohttp_web.Request) -> str:
+    request_id = request.headers.get(REQUEST_ID_HEADER)
+    if request_id is not None and _REQUEST_ID_PATTERN.fullmatch(request_id):
+        return request_id
+    return uuid.uuid4().hex
+
+
 @dataclasses.dataclass(frozen=True)
 class RequestContextMiddleware:
     @aiohttp_web.middleware
@@ -32,19 +43,24 @@ class RequestContextMiddleware:
         request: aiohttp_web.Request,
         handler: aiohttp_typedefs.Handler,
     ) -> aiohttp_web.StreamResponse:
-        request_id = request.headers.get(REQUEST_ID_HEADER) or uuid.uuid4().hex
+        request_id = _get_request_id(request)
+        request[_REQUEST_ID_KEY] = request_id
         token = _request_context_var.set(RequestContext(request_id=request_id))
         try:
-            response = await handler(request)
-        except aiohttp_web.HTTPException as exc:
-            # Unmapped aiohttp HTTP exceptions are rendered by aiohttp itself, so they carry the header too
-            exc.headers[REQUEST_ID_HEADER] = request_id
-            raise
+            return await handler(request)
         finally:
             _request_context_var.reset(token)
 
+
+async def set_response_request_id(
+    request: aiohttp_web.Request,
+    response: aiohttp_web.StreamResponse,
+) -> None:
+    # on_response_prepare runs for every prepared response: returned, streamed by the handler
+    # or raised as aiohttp HTTP exception
+    request_id = request.get(_REQUEST_ID_KEY)
+    if request_id is not None:
         response.headers[REQUEST_ID_HEADER] = request_id
-        return response
 
 
 class RequestContextLogFilter(logging.Filter):
@@ -60,4 +76,5 @@ __all__ = [
     "RequestContextLogFilter",
     "RequestContextMiddleware",
     "get_request_context",
+    "set_response_request_id",
 ]

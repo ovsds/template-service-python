@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import http
 import logging
@@ -20,13 +21,17 @@ class RequestLoggingMiddleware:
         start_time = time.perf_counter()
         # Error middleware turns exceptions into responses, only unmapped aiohttp HTTP exceptions and
         # cancellations get here
-        status: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
+        status: int | str = http.HTTPStatus.INTERNAL_SERVER_ERROR
         try:
             response = await handler(request)
             status = response.status
             return response
         except aiohttp_web.HTTPException as exc:
             status = exc.status
+            raise
+        except asyncio.CancelledError:
+            # The client has disconnected before the response, no status was sent
+            status = "cancelled"
             raise
         finally:
             duration_ms = (time.perf_counter() - start_time) * 1000

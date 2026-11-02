@@ -15,7 +15,7 @@
 #### Logging
 
 - `LOGS__LEVEL` - logging level, can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`. Default is `INFO`.
-- `LOGS__FORMAT` - logging format string, passed to python logging formatter. Default is `%(asctime)s - %(name)s - %(levelname)s - %(message)s`.
+- `LOGS__FORMAT` - logging format string, passed to python logging formatter. Default is {%- if cookiecutter.with_http_server == 'true' %} `%(asctime)s | %(name)s | %(levelname)s | %(request_id)s | %(message)s`{%- else %} `%(asctime)s | %(name)s | %(levelname)s | %(message)s`{%- endif %}.
 {%- if cookiecutter.with_http_server == 'true' %}
 
 #### HTTP server
@@ -23,7 +23,7 @@
 - `HTTP_SERVER__HOST` - HTTP server host. Default is `0.0.0.0`.
 - `HTTP_SERVER__PORT` - HTTP server port. Default is `8080`.
 
-Each request gets an ID from the `X-Request-ID` request header, or a generated one, returned in the `X-Request-ID` response header and available to `LOGS__FORMAT` as `%(request_id)s`.
+Each request gets an ID from the `X-Request-ID` request header (up to 128 of `A-Za-z0-9._-`), or a generated one, returned in the `X-Request-ID` response header and available to `LOGS__FORMAT` as `%(request_id)s`.
 {%- endif %}
 
 ## Development

@@ -18,6 +18,7 @@ class Lifecycle:
 
     def __post_init__(self) -> None:
         # Requests are logged by RequestLoggingMiddleware, aiohttp access log would duplicate them
+        # Requests aiohttp rejects before middlewares (malformed HTTP) are not logged
         object.__setattr__(self, "runner", aiohttp_web.AppRunner(self.app, access_log=None))
 
     async def start_server(self) -> None:

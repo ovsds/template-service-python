@@ -14,6 +14,7 @@ import lib.utils.aiohttp.request_logging as request_logging
 class AppFactory:
     def create(self) -> aiohttp_web.Application:
         app = aiohttp_web.Application(middlewares=self.get_middlewares())
+        app.on_response_prepare.append(request_context.set_response_request_id)
         for route in self.get_routes():
             app.router.add_route(route.method, route.path, route.handler.process)
         return app
@@ -25,7 +26,7 @@ class AppFactory:
         request_context_middleware = request_context.RequestContextMiddleware()
         request_logging_middleware = request_logging.RequestLoggingMiddleware()
         error_handling_middleware = error_handling.ErrorHandlingMiddleware(error_map=self.get_error_map())
-        # Request context goes outermost, so the request log and error responses carry the request ID
+        # Request context goes outermost, so the request log and error logs carry the request ID
         return [
             request_context_middleware.process,
             request_logging_middleware.process,
