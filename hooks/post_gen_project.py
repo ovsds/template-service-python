@@ -26,7 +26,11 @@ if __name__ == "__main__":
     if "{{ cookiecutter.with_aiogram_utils }}" != "true":
         remove_folder("lib/utils/aiogram")
 
-    if "{{ cookiecutter.with_http_server }}" != "true":
+    if "{{ cookiecutter.with_prometheus }}" != "true":
+        remove_file("lib/utils/aiohttp/metrics.py")
+        remove_file("tests/unit/utils/aiohttp/test_metrics.py")
+
+    if "{{ cookiecutter.__with_http_server }}" != "true":
         remove_file("lib/app/http_server.py")
         remove_file("lib/utils/aiohttp/app.py")
         remove_file("lib/utils/aiohttp/error_handling.py")

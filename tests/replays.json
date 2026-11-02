@@ -72,6 +72,12 @@
       }
     },
     {
+      "name": "With Prometheus",
+      "parameters": {
+        "with_prometheus": "true"
+      }
+    },
+    {
       "name": "All",
       "parameters": {
         "with_trivy": "true",
@@ -81,6 +87,7 @@
         "python_version": "3.14.8",
         "with_aiohttp_utils": "true",
         "with_http_server": "true",
+        "with_prometheus": "true",
         "with_json_utils": "true"
       },
       "envs": {

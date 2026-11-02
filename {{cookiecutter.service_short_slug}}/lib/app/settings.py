@@ -7,7 +7,7 @@ import lib.utils.pydantic as pydantic_utils
 
 
 class AppSettings(pydantic_utils.BaseSettingsModel):
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
     name: str = "{{ cookiecutter.service_slug }}"
 {%- endif %}
     env: str = "production"
@@ -28,14 +28,14 @@ class AppSettings(pydantic_utils.BaseSettingsModel):
 
 class LoggingSettings(pydantic_utils.BaseSettingsModel):
     level: logging_utils.LogLevel = "INFO"
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
     format: str = "%(asctime)s | %(name)s | %(levelname)s | %(request_id)s | %(message)s"
 {%- else %}
     format: str = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
 {%- endif %}
 
 
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
 
 
 class HttpServerSettings(pydantic_utils.BaseSettingsModel):
@@ -47,7 +47,7 @@ class HttpServerSettings(pydantic_utils.BaseSettingsModel):
 class Settings(pydantic_utils.BaseSettings):
     app: AppSettings = pydantic.Field(default_factory=AppSettings)
     logs: LoggingSettings = pydantic.Field(default_factory=LoggingSettings)
-{%- if cookiecutter.with_http_server == "true" %}
+{%- if cookiecutter.__with_http_server == "true" %}
     http_server: HttpServerSettings = pydantic.Field(default_factory=HttpServerSettings)
 {%- endif %}
 
