@@ -56,3 +56,32 @@ async def test_app_info(monkeypatch: pytest.MonkeyPatch):
 
         assert response.status == 200
         assert await response.json() == {"name": "test-service", "version": "1.2.3"}
+
+
+@pytest.mark.asyncio
+async def test_openapi_spec(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP__NAME", "test-service")
+    monkeypatch.setenv("APP__VERSION", "1.2.3")
+
+    async with create_client() as client:
+        response = await client.get("/api/v1/docs/spec.json")
+
+        assert response.status == 200
+        spec = await response.json()
+        assert spec["info"] == {"title": "test-service", "version": "1.2.3"}
+        assert {path: list(operations) for path, operations in spec["paths"].items()} == {
+            "/health/liveness": ["get"],
+            "/health/readiness": ["get"],
+            "/health/startup": ["get"],
+            "/api/v1/info": ["get"],
+        }
+        assert spec["paths"]["/api/v1/info"]["get"]["tags"] == ["app"]
+
+
+@pytest.mark.asyncio
+async def test_swagger_ui():
+    async with create_client() as client:
+        response = await client.get("/api/v1/docs")
+
+        assert response.status == 200
+        assert response.content_type == "text/html"

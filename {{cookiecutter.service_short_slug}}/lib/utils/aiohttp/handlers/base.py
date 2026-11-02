@@ -91,6 +91,9 @@ class Route:
     method: str
     path: str
     handler: BaseHandler
+    openapi_tags: collections.abc.Sequence[str] = ()
+    openapi_summary: str = ""
+    openapi_include: bool = True
 
 
 __all__ = [

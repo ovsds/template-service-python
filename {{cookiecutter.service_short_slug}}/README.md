@@ -22,6 +22,8 @@
 
 - `HTTP_SERVER__HOST` - HTTP server host. Default is `0.0.0.0`.
 - `HTTP_SERVER__PORT` - HTTP server port. Default is `8080`.
+
+`GET /api/v1/docs` serves a Swagger UI, which loads its assets from `cdn.jsdelivr.net`, over the OpenAPI spec at `GET /api/v1/docs/spec.json`. The spec is built from each route's handler `RequestSchema` and `ResponseSchema` and the route's `openapi_*` fields.
 {%- endif %}
 
 ## Development
