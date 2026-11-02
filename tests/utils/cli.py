@@ -50,14 +50,26 @@ def _read_lines(lines: typing.Iterable[str], output: "queue.Queue[str | None]") 
     output.put(None)
 
 
+def _format_signal_masks(pid: str) -> str:
+    # blocked, ignored and caught signals in hex, SIGINT being 0x2; SigBlk is the main thread's only
+    try:
+        with open(f"/proc/{pid}/status") as status:
+            masks = [line.split() for line in status if line.startswith(("SigBlk:", "SigIgn:", "SigCgt:"))]
+    except OSError:
+        return "n/a"
+    return " ".join(f"{name}{value}" for name, value in masks)
+
+
 def _print_stop_diagnostics(session_id: int, env: dict[str, str]) -> None:
     # which processes ignored the SIGINT, and in which process groups, for a CI run that cannot be reproduced locally
     print(f"Processes of session {session_id} and dev servers:", flush=True)
     ps = subprocess.run(["ps", "-eo", "pid,ppid,pgid,sid,stat,args"], capture_output=True, text=True, check=False)
     for index, line in enumerate(ps.stdout.splitlines()):
         fields = line.split(maxsplit=5)
-        if index == 0 or (len(fields) > 3 and fields[3] == str(session_id)) or "bin.main" in line:
-            print(line, flush=True)
+        if index == 0:
+            print(f"{line} SIGNAL MASKS", flush=True)
+        elif (len(fields) > 3 and fields[3] == str(session_id)) or "bin.main" in line:
+            print(f"{line} {_format_signal_masks(fields[0])}", flush=True)
     mise_env = {key: value for key, value in env.items() if key.startswith("MISE_") or key.startswith("__MISE")}
     print(f"mise environment of the command: {sorted(mise_env)}", flush=True)
 
@@ -75,17 +87,24 @@ def run_command_until_output(
     # the command gets a session of its own, yet under `mise run test` a nested mise inherits this flag, leaves the
     # group's signals to its parent and never forwards the leader's SIGINT
     environ = {key: value for key, value in os.environ.items() if key != "MISE_TASK_PGID_MANAGED"}
-    # no shell in between: the leader that gets SIGINT is the command itself, whatever /bin/sh does
-    process = subprocess.Popen(
-        shlex.split(command),
-        cwd=cwd,
-        env={**environ, **envs},
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-        start_new_session=True,
-    )
+    # a CI runner may start the tests with SIGINT blocked, and a child keeps the mask through exec: neither mise nor
+    # the dev server would ever get the SIGINT, so the child starts with it unblocked
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+    try:
+        signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT})
+        # no shell in between: the leader that gets SIGINT is the command itself, whatever /bin/sh does
+        process = subprocess.Popen(
+            shlex.split(command),
+            cwd=cwd,
+            env={**environ, **envs},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            start_new_session=True,
+        )
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
     assert process.stdout is not None
     lines: queue.Queue[str | None] = queue.Queue()
     reader = threading.Thread(target=_read_lines, args=(process.stdout, lines), daemon=True)
