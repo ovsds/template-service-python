@@ -40,6 +40,14 @@ async def test_liveness_probe():
 
 
 @pytest.mark.asyncio
+async def test_request_id():
+    async with create_client() as client:
+        response = await client.get("/health/liveness", headers={"X-Request-ID": "test-request-id"})
+
+        assert response.headers["X-Request-ID"] == "test-request-id"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("path", ["/health/readiness", "/health/startup"])
 async def test_subsystem_probe(path: str):
     async with create_client() as client:
