@@ -23,9 +23,6 @@ if __name__ == "__main__":
         remove_file(".settings/dev_docker.yaml")
         remove_file(".settings/test_docker.yaml")
 
-    if "{{ cookiecutter.with_aiogram_utils }}" != "true":
-        remove_folder("lib/utils/aiogram")
-
     if "{{ cookiecutter.with_prometheus }}" != "true":
         remove_file("lib/utils/aiohttp/metrics.py")
         remove_file("tests/unit/utils/aiohttp/test_metrics.py")
@@ -54,3 +51,4 @@ if __name__ == "__main__":
     remove_file("Taskfile.yaml") # replaced by mise.toml
     remove_file("mise-tasks/image-bake") # moved to mise.toml
     remove_folder("lib/utils/aiohttp/logging", missing_ok=True) # unused PrintLogger, aiohttp runs through AppRunner
+    remove_folder("lib/utils/aiogram", missing_ok=True) # with_aiogram_utils dropped

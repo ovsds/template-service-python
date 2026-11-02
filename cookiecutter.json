@@ -6,7 +6,6 @@
   "with_trivy": "false",
   "with_ngrok": "false",
   "with_docker": "false",
-  "with_aiogram_utils": "false",
   "with_aiohttp_utils": "false",
   "with_http_server": "false",
   "with_prometheus": "false",
