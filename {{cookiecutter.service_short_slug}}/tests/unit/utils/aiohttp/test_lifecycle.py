@@ -63,6 +63,8 @@ async def test_lifecycle_fails_startup_on_busy_port():
             shutdown_callbacks=http_server_lifecycle.get_shutdown_callbacks(),
         )
 
-        with pytest.raises(lifecycle_utils.Lifecycle.StartupError):
-            await lifecycle.on_startup()
-        await lifecycle.on_shutdown()
+        try:
+            with pytest.raises(lifecycle_utils.Lifecycle.StartupError):
+                await lifecycle.on_startup()
+        finally:
+            await lifecycle.on_shutdown()

@@ -1,6 +1,6 @@
 import contextlib
 import os
-import queue as queue_module
+import queue
 import signal
 import subprocess
 import threading
@@ -43,10 +43,10 @@ def run_command(
         ) from exc
 
 
-def _read_lines(lines: typing.Iterable[str], queue: "queue_module.Queue[str | None]") -> None:
+def _read_lines(lines: typing.Iterable[str], output: "queue.Queue[str | None]") -> None:
     for line in lines:
-        queue.put(line)
-    queue.put(None)
+        output.put(line)
+    output.put(None)
 
 
 def run_command_until_output(
@@ -71,7 +71,7 @@ def run_command_until_output(
         start_new_session=True,
     )
     assert process.stdout is not None
-    lines: queue_module.Queue[str | None] = queue_module.Queue()
+    lines: queue.Queue[str | None] = queue.Queue()
     reader = threading.Thread(target=_read_lines, args=(process.stdout, lines), daemon=True)
     reader.start()
     deadline = time.monotonic() + START_TIMEOUT_SECONDS
@@ -79,7 +79,7 @@ def run_command_until_output(
         while True:
             try:
                 line = lines.get(timeout=max(deadline - time.monotonic(), 0))
-            except queue_module.Empty as exc:
+            except queue.Empty as exc:
                 print(f"Command({command}) printed no {stop_on_output!r} in {START_TIMEOUT_SECONDS}s")
                 raise CommandError(exit_code=-signal.SIGKILL, stderr="", command=command) from exc
 
