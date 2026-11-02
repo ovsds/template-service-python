@@ -27,7 +27,7 @@ Optional, gated by cookiecutter flags answered at generation time:
 - `with_ngrok` — mise task to expose the local app via an ngrok tunnel.
 - `with_aiohttp_utils` — `lib/utils/aiohttp/` helpers.
 - `with_aiogram_utils` — `lib/utils/aiogram/` helpers (Telegram bot).
-- `with_json_utils` — `lib/utils/json.py` (orjson wrapper).
+- `with_json_utils` — `lib/utils/json.py` (orjson wrapper), also included by `with_aiohttp_utils`.
 
 ## Quickstart
 

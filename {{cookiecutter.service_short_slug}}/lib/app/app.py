@@ -37,13 +37,13 @@ class Application:
         lifecycle_startup_callbacks: list[lifecycle_utils.Callback] = []
         lifecycle_shutdown_callbacks: list[lifecycle_utils.Callback] = []
 
-        logger.info("Initializing global dependencies")
+        # Global dependencies
 
-        logger.info("Initializing clients")
+        # Clients
 
-        logger.info("Initializing repositories")
+        # Repositories
 
-        logger.info("Initializing services")
+        # Services
 
         logger.info("Initializing lifecycle manager")
 

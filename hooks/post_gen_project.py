@@ -3,8 +3,10 @@ import pathlib
 import shutil
 
 
-def remove_folder(folder_path: str) -> None:
+def remove_folder(folder_path: str, missing_ok: bool = False) -> None:
     folder = pathlib.Path(folder_path)
+    if missing_ok and not folder.exists():
+        return
     shutil.rmtree(folder)
 
 
@@ -27,9 +29,11 @@ if __name__ == "__main__":
     if "{{ cookiecutter.with_aiohttp_utils }}" != "true":
         remove_folder("lib/utils/aiohttp")
 
-    if "{{ cookiecutter.with_json_utils }}" != "true":
+    # lib/utils/aiohttp/handlers/responses.py imports lib.utils.json
+    if "{{ cookiecutter.with_json_utils }}" != "true" and "{{ cookiecutter.with_aiohttp_utils }}" != "true":
         remove_file("lib/utils/json.py")
 
     remove_file("lib/utils/lifecycle_manager.py") # moved to lib/utils/lifecycle.py
     remove_file("Taskfile.yaml") # replaced by mise.toml
     remove_file("mise-tasks/image-bake") # moved to mise.toml
+    remove_folder("lib/utils/aiohttp/logging", missing_ok=True) # unused PrintLogger, aiohttp runs through AppRunner

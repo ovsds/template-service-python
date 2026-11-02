@@ -50,8 +50,7 @@
     {
       "name": "With Aiohttp utils",
       "parameters": {
-        "with_aiohttp_utils": "true",
-        "with_json_utils": "true"
+        "with_aiohttp_utils": "true"
       }
     },
     {
