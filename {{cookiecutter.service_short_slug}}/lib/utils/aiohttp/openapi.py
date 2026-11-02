@@ -2,8 +2,10 @@ import collections.abc
 import dataclasses
 import html
 import http
+import logging
 import posixpath
 import re
+import types
 import typing
 
 import aiohttp.hdrs as aiohttp_hdrs
@@ -21,9 +23,12 @@ SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.33.3"
 SWAGGER_UI_CSS_INTEGRITY = "sha384-Ov4/wv3j2bmct8cDc5X4ngJZohVPzEmc6uDPH8WeljUxO5vtoykvMEfbu9Vh6RaW"
 SWAGGER_UI_BUNDLE_INTEGRITY = "sha384-h00llMzD1afyNow1pDmnZKlHsUZgp9KE9HXLFXF2CvbwsBY0+WBO4f75SfGwvM4K"
 
+logger = logging.getLogger(__name__)
+
 _SCHEMA_REF_PREFIX = "#/components/schemas/"
 # aiohttp path variables may carry a regex, "{name:\d+}"; OpenAPI paths take the bare "{name}"
 _PATH_VARIABLE_REGEX = re.compile(r"\{(?P<name>[^{}:]+):[^{}]*(?:\{[^{}]*\}[^{}]*)*\}")
+_BARE_PATH_VARIABLE_REGEX = re.compile(r"\{(?P<name>[^{}]+)\}")
 
 _ModelKey = tuple[type[pydantic.BaseModel], pydantic_json_schema.JsonSchemaMode]
 
@@ -62,12 +67,19 @@ class _Operation:
             return cls(route=route, response_model=response_model)
 
         body_field = request_schema.model_fields.get("body")
+        body_model = cls._get_field_model(request_schema, "body")
         return cls(
             route=route,
             path_model=cls._get_field_model(request_schema, "path"),
             query_model=cls._get_field_model(request_schema, "query"),
-            body_model=cls._get_field_model(request_schema, "body"),
-            body_required=body_field is not None and body_field.is_required(),
+            body_model=body_model,
+            # A request without a body validates "{}", which needs no body when every body field has a default
+            body_required=(
+                body_field is not None
+                and body_field.is_required()
+                and body_model is not None
+                and any(field.is_required() for field in body_model.model_fields.values())
+            ),
             response_model=response_model,
             has_request_schema=True,
         )
@@ -80,9 +92,16 @@ class _Operation:
         field = request_schema.model_fields.get(field_name)
         if field is None:
             return None
-        if isinstance(field.annotation, type) and issubclass(field.annotation, pydantic.BaseModel):
-            return field.annotation
-        raise ValueError(f"{request_schema.__qualname__}.{field_name} must be a pydantic model for OpenAPI")
+        # pydantic strips Annotated from field annotations; "Model | None" is unwrapped to Model
+        candidates = [arg for arg in typing.get_args(field.annotation) if arg is not types.NoneType]
+        if len(candidates) != 1:
+            candidates = [field.annotation]
+        model = candidates[0]
+        if isinstance(model, type) and issubclass(model, pydantic.BaseModel):
+            return model
+        # The spec leaves the field out rather than fail the app that serves it
+        logger.warning("OpenAPI skips %s.%s: not a pydantic model", request_schema.__qualname__, field_name)
+        return None
 
     @property
     def model_keys(self) -> list[_ModelKey]:
@@ -111,17 +130,22 @@ class _SpecBuilder:
         )
         return cls(refs={key: refs[key] for key in model_keys}, schemas=definitions.get("$defs", {}))
 
-    def build_operation(self, operation: _Operation) -> dict[str, typing.Any]:
+    def build_operation(self, operation: _Operation, path: str) -> dict[str, typing.Any]:
         result: dict[str, typing.Any] = {}
         if operation.route.openapi_tags:
             result["tags"] = list(operation.route.openapi_tags)
         if operation.route.openapi_summary:
             result["summary"] = operation.route.openapi_summary
 
-        parameters = [
-            *self._build_parameters(operation.path_model, "path"),
-            *self._build_parameters(operation.query_model, "query"),
-        ]
+        path_parameters = self._build_parameters(operation.path_model, "path")
+        documented = {parameter["name"] for parameter in path_parameters}
+        # OpenAPI needs every path template variable declared, also one the handler reads without a path model
+        path_parameters.extend(
+            {"name": name, "in": "path", "required": True, "schema": {"type": "string"}}
+            for name in _BARE_PATH_VARIABLE_REGEX.findall(path)
+            if name not in documented
+        )
+        parameters = [*path_parameters, *self._build_parameters(operation.query_model, "query")]
         if parameters:
             result["parameters"] = parameters
 
@@ -186,7 +210,7 @@ def build_openapi_spec(
     paths: dict[str, dict[str, typing.Any]] = {}
     for operation in operations:
         path = _PATH_VARIABLE_REGEX.sub(r"{\g<name>}", operation.route.path)
-        paths.setdefault(path, {})[operation.route.method.lower()] = builder.build_operation(operation)
+        paths.setdefault(path, {})[operation.route.method.lower()] = builder.build_operation(operation, path)
 
     info_data = {"title": info.title, "version": info.version}
     if info.description:
@@ -252,6 +276,7 @@ def create_openapi_routes(
     routes: collections.abc.Sequence[handlers_base.Route],
     docs_path: str,
 ) -> list[handlers_base.Route]:
+    docs_path = docs_path.rstrip("/")
     spec_path = f"{docs_path}/spec.json"
     # Relative to the docs page, so the UI keeps working behind a proxy that adds a path prefix
     spec_url = posixpath.relpath(spec_path, posixpath.dirname(docs_path))

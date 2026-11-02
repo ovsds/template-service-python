@@ -154,9 +154,49 @@ def test_spec_skips_excluded_and_wildcard_routes():
     assert spec["paths"] == {}
 
 
-def test_spec_rejects_request_field_that_is_not_a_model():
-    with pytest.raises(ValueError, match="InvalidRequestSchema.query must be a pydantic model"):
-        build_spec([aiohttp_utils.Route(method="GET", path="/invalid", handler=InvalidRequestHandler())])
+def test_spec_skips_request_field_that_is_not_a_model():
+    spec = build_spec([aiohttp_utils.Route(method="GET", path="/invalid", handler=InvalidRequestHandler())])
+
+    assert "parameters" not in spec["paths"]["/invalid"]["get"]
+
+
+class OptionalBodyRequestBodySchema(pydantic_utils.BaseModel):
+    note: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
+class OptionalBodyHandler(aiohttp_utils.BaseHandler):
+    class RequestSchema(aiohttp_utils.BaseRequestSchema):
+        body: OptionalBodyRequestBodySchema | None = None
+
+    async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
+        raise NotImplementedError
+
+
+@dataclasses.dataclass(frozen=True)
+class DefaultsBodyHandler(aiohttp_utils.BaseHandler):
+    class RequestSchema(aiohttp_utils.BaseRequestSchema):
+        body: OptionalBodyRequestBodySchema
+
+    async def process(self, request: aiohttp_web.Request) -> aiohttp_web.StreamResponse:
+        raise NotImplementedError
+
+
+@pytest.mark.parametrize("handler", [OptionalBodyHandler(), DefaultsBodyHandler()])
+def test_spec_documents_body_that_may_be_left_out(handler: aiohttp_utils.BaseHandler):
+    spec = build_spec([aiohttp_utils.Route(method="POST", path="/notes", handler=handler)])
+
+    request_body = spec["paths"]["/notes"]["post"]["requestBody"]
+    assert request_body["required"] is False
+    assert set(resolve(spec, request_body["content"]["application/json"]["schema"])["properties"]) == {"note"}
+
+
+def test_spec_declares_path_variables_without_path_model():
+    spec = build_spec([aiohttp_utils.Route(method="GET", path=r"/plain/{plain_id:\d+}", handler=PlainHandler())])
+
+    assert spec["paths"]["/plain/{plain_id}"]["get"]["parameters"] == [
+        {"name": "plain_id", "in": "path", "required": True, "schema": {"type": "string"}},
+    ]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -199,6 +239,19 @@ async def test_app_serves_swagger_ui():
         assert '"url":"docs/spec.json"' in page
         assert "<title>Example &lt;/script&gt;</title>" in page
         assert 'integrity="sha384-' in page
+
+
+@dataclasses.dataclass(frozen=True)
+class TrailingSlashAppFactory(ExampleAppFactory):
+    def get_openapi_docs_path(self) -> str:
+        return "/docs/"
+
+
+@pytest.mark.asyncio
+async def test_app_serves_docs_path_with_trailing_slash():
+    async with create_client(TrailingSlashAppFactory()) as client:
+        assert (await client.get("/docs")).status == 200
+        assert (await client.get("/docs/spec.json")).status == 200
 
 
 @pytest.mark.asyncio
