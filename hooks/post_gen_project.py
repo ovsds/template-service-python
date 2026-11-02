@@ -37,6 +37,7 @@ if __name__ == "__main__":
         remove_file("lib/utils/aiohttp/handlers/app_info.py")
         remove_file("lib/utils/aiohttp/handlers/base.py")
         remove_file("lib/utils/aiohttp/lifecycle.py")
+        remove_file("lib/utils/aiohttp/openapi.py")
         remove_file("lib/utils/aiohttp/request_context.py")
         remove_file("lib/utils/aiohttp/request_logging.py")
         remove_folder("tests/unit/app")

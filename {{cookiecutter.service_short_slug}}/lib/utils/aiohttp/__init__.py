@@ -10,6 +10,7 @@ from .lifecycle import *
 from .metrics import *
 {%- endif %}
 {%- if cookiecutter.__with_http_server == "true" %}
+from .openapi import *
 from .request_context import *
 from .request_logging import *
 {%- endif %}

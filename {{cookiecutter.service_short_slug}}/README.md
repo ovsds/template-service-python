@@ -24,6 +24,8 @@
 - `HTTP_SERVER__PORT` - HTTP server port. Default is `8080`.
 
 Each request gets an ID from the `X-Request-ID` request header (up to 128 of `A-Za-z0-9._-`), or a generated one, returned in the `X-Request-ID` response header and available to `LOGS__FORMAT` as `%(request_id)s`.
+
+`GET /api/v1/docs` serves a Swagger UI, which loads its assets from `cdn.jsdelivr.net`, over the OpenAPI spec at `GET /api/v1/docs/spec.json`. The spec is built from each route's handler `RequestSchema` and `ResponseSchema` and the route's `openapi_*` fields.
 {%- endif %}
 {%- if cookiecutter.with_prometheus == 'true' %}
 
