@@ -22,6 +22,8 @@
 
 - `HTTP_SERVER__HOST` - HTTP server host. Default is `0.0.0.0`.
 - `HTTP_SERVER__PORT` - HTTP server port. Default is `8080`.
+
+Each request gets an ID from the `X-Request-ID` request header, or a generated one, returned in the `X-Request-ID` response header and available to `LOGS__FORMAT` as `%(request_id)s`.
 {%- endif %}
 
 ## Development

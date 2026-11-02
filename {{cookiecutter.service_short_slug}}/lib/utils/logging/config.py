@@ -23,6 +23,7 @@ def create_config(
     log_level: LogLevel,
     log_format: str,
     loggers: dict[str, LoggerConfig] | None = None,
+    filters: dict[str, typing.Callable[[], logging.Filter]] | None = None,
 ) -> dict[str, typing.Any]:
     config: dict[str, typing.Any] = {
         "version": 1,
@@ -45,6 +46,11 @@ def create_config(
             "handlers": ["default"],
         },
     }
+
+    if filters:
+        # Handler filters see every record the handler emits, including ones of non-propagating loggers
+        config["filters"] = {filter_name: {"()": filter_factory} for filter_name, filter_factory in filters.items()}
+        config["handlers"]["default"]["filters"] = list(filters)
 
     if loggers:
         config["loggers"] = {

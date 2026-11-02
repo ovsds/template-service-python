@@ -33,6 +33,11 @@ class Application:
                     level=log_level,
                 ),
             },
+{%- if cookiecutter.with_http_server == "true" %}
+            filters={
+                "request_context": aiohttp_utils.RequestContextLogFilter,
+            },
+{%- endif %}
         )
         logging_utils.initialize(config=logging_config)
         logger.info("Logging has been initialized with config: %s", logging_config)

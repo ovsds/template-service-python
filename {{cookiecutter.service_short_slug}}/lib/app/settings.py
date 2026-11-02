@@ -28,7 +28,11 @@ class AppSettings(pydantic_utils.BaseSettingsModel):
 
 class LoggingSettings(pydantic_utils.BaseSettingsModel):
     level: logging_utils.LogLevel = "INFO"
+{%- if cookiecutter.with_http_server == "true" %}
+    format: str = "%(asctime)s | %(name)s | %(levelname)s | %(request_id)s | %(message)s"
+{%- else %}
     format: str = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+{%- endif %}
 
 
 {%- if cookiecutter.with_http_server == "true" %}
