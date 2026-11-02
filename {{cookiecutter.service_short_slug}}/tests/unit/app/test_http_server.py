@@ -4,12 +4,23 @@ import pytest
 
 import lib.app.http_server as app_http_server
 import lib.app.settings as app_settings
+import lib.utils.aiohttp as aiohttp_utils
 
 Client = aiohttp_test_utils.TestClient[aiohttp_web.Request, aiohttp_web.Application]
 
 
+async def is_ready() -> bool:
+    return True
+
+
 def create_client() -> Client:
-    app = app_http_server.HttpServerAppFactory(settings=app_settings.Settings()).create()
+    readiness_service = aiohttp_utils.ReadinessService(
+        subsystems=[aiohttp_utils.SubsystemReadinessCallback(name="database", is_ready=is_ready)],
+    )
+    app = app_http_server.HttpServerAppFactory(
+        settings=app_settings.Settings(),
+        readiness_service=readiness_service,
+    ).create()
     return aiohttp_test_utils.TestClient(aiohttp_test_utils.TestServer(app))
 
 
@@ -20,6 +31,19 @@ async def test_liveness_probe():
 
         assert response.status == 200
         assert await response.json() == {"status": "healthy"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/health/readiness", "/health/startup"])
+async def test_subsystem_probe(path: str):
+    async with create_client() as client:
+        response = await client.get(path)
+
+        assert response.status == 200
+        assert await response.json() == {
+            "status": "healthy",
+            "subsystems_status": {"database": {"value": True, "required": True}},
+        }
 
 
 @pytest.mark.asyncio

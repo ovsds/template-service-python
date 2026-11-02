@@ -1,38 +1,32 @@
 import dataclasses
 import logging
-import typing
 
 import aiohttp.web as aiohttp_web
 
 import lib.utils.aiohttp as aiohttp_utils
+import lib.utils.aiohttp.handlers.health.service as health_service
 
 logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True)
-class SubsystemReadinessCallback:
-    name: str
-    is_ready: typing.Callable[[], typing.Awaitable[bool]]
-
-
-@dataclasses.dataclass(frozen=True)
 class ReadinessProbeHandler:
-    subsystems: typing.Sequence[SubsystemReadinessCallback]
+    readiness_service: health_service.ReadinessService
 
     async def process(self, request: aiohttp_web.Request) -> aiohttp_web.Response:
-        subsystems_status: dict[str, bool] = {}
+        statuses = await self.readiness_service.get_statuses()
+        subsystems_status = {
+            name: {"value": status.value, "required": status.readiness_required}
+            for name, status in statuses.statuses.items()
+        }
 
-        for subsystem in self.subsystems:
-            is_ready = await subsystem.is_ready()
-            subsystems_status[subsystem.name] = is_ready
-
-        if all(subsystems_status.values()):
+        if statuses.is_readiness_ready():
             return aiohttp_utils.Response.with_data(
                 status=200,
-                data={"status": "healthy"},
+                data={"status": "healthy", "subsystems_status": subsystems_status},
             )
 
-        logger.error("Not all subsystems are healthy!", extra=subsystems_status)
+        logger.error("Not all required subsystems are ready!", extra={"subsystems_status": subsystems_status})
 
         return aiohttp_utils.Response.with_data(
             status=500,
@@ -42,5 +36,4 @@ class ReadinessProbeHandler:
 
 __all__ = [
     "ReadinessProbeHandler",
-    "SubsystemReadinessCallback",
 ]

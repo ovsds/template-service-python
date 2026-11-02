@@ -55,7 +55,15 @@ class Application:
         # HTTP server
 
         logger.info("Initializing HTTP server")
-        http_server_app = app_http_server.HttpServerAppFactory(settings=settings).create()
+        readiness_service = aiohttp_utils.ReadinessService(
+            subsystems=[
+                # Services register their subsystems here
+            ],
+        )
+        http_server_app = app_http_server.HttpServerAppFactory(
+            settings=settings,
+            readiness_service=readiness_service,
+        ).create()
         http_server_lifecycle = aiohttp_utils.Lifecycle(
             logger=logger,
             app=http_server_app,
