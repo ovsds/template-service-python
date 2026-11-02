@@ -59,11 +59,14 @@ def run_command_until_output(
         envs = {}
 
     print(f"Running command {command} until output {stop_on_output!r}...")
+    # the command gets a session of its own, yet under `mise run test` a nested mise inherits this flag, leaves the
+    # group's signals to its parent and never forwards the leader's SIGINT
+    environ = {key: value for key, value in os.environ.items() if key != "MISE_TASK_PGID_MANAGED"}
     process = subprocess.Popen(
         command,
         cwd=cwd,
         shell=True,
-        env={**os.environ, **envs},
+        env={**environ, **envs},
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
