@@ -14,6 +14,9 @@ RUN poetry install --no-root
 
 FROM base_runtime AS common_runtime
 
+# The base image lags Debian's security fixes between its rebuilds
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade --yes && rm -rf /var/lib/apt/lists/*
+
 RUN python -m pip uninstall --yes pip
 
 RUN mkdir --parents /opt/app
